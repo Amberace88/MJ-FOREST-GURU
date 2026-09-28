@@ -163,6 +163,7 @@ export const lv = {
     loggingIn: "Pieslēdzas…",
     logout: "Iziet",
     forgot: "Aizmirsāt paroli?",
+    firstTime: "Pirmo reizi? Atveriet uzaicinājuma e-pastu vai izmantojiet “Aizmirsāt paroli?”, lai iestatītu paroli.",
     forgotTitle: "Paroles atjaunošana",
     forgotText: "Ievadiet e-pastu. Ja konts eksistē, nosūtīsim saiti paroles maiņai.",
     sendLink: "Nosūtīt saiti",

@@ -74,6 +74,7 @@ export function LoginForm({ next, expired, notConfigured }: { next?: string; exp
       <Submit>{t("auth.login")}</Submit>
       <div className="pt-1 text-center">
         <Link href="/forgot-password" className="text-sm text-muted underline-offset-4 hover:text-ink hover:underline">{t("auth.forgot")}</Link>
+        <p className="mt-2 text-xs text-faint">{t("auth.firstTime")}</p>
       </div>
     </form>
   );
