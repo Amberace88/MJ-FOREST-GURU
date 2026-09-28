@@ -4,9 +4,13 @@ import { AlertOctagon, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 import { lv } from "@/i18n/lv";
+import { isStaleDeployError, reloadOnceForNewDeploy } from "@/lib/stale-deploy";
 
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => { console.error(error); }, [error]);
+  useEffect(() => {
+    if (isStaleDeployError(error) && reloadOnceForNewDeploy()) return;
+    console.error(error);
+  }, [error]);
   const offline = typeof navigator !== "undefined" && !navigator.onLine;
   return (
     <div className="mx-auto max-w-lg py-12 text-center">

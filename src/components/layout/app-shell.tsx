@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toast";
 import { I18nProvider } from "@/i18n/client";
+import { isStaleDeployError, reloadOnceForNewDeploy } from "@/lib/stale-deploy";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { CommandMenu, useCommandMenu } from "./command-menu";
 import { MobileNav } from "./mobile-nav";
@@ -32,6 +33,13 @@ export type ShellProps = {
 export function AppShell(props: ShellProps) {
   const { open, setOpen } = useCommandMenu();
   const router = useRouter();
+
+  // New deployment while this tab was open: reload once instead of failing actions.
+  useEffect(() => {
+    const onRejection = (e: PromiseRejectionEvent) => { if (isStaleDeployError(e.reason)) reloadOnceForNewDeploy(); };
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => window.removeEventListener("unhandledrejection", onRejection);
+  }, []);
 
   // Session expiry: redirect to login with a clear message. Offline queue stays in IndexedDB.
   useEffect(() => {
