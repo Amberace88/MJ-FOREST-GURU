@@ -113,6 +113,7 @@ export const lv = {
     unassign: "Noņemt",
     send: "Nosūtīt",
     live: "Tiešsaistē",
+    organization: "Uzņēmums",
   },
   nav: {
     groups: {

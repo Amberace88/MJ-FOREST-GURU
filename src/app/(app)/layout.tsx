@@ -33,6 +33,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       userName={ctx.employee?.full_name ?? ctx.profile?.full_name ?? ctx.user.email ?? ""}
       roleLabel={ctx.label("users.roleNames", topRole)}
       orgName={ctx.org.name}
+      orgId={ctx.org.id}
+      orgs={ctx.orgs.map((o) => ({ id: o.id, name: o.name, is_demo: o.is_demo }))}
       isDemo={ctx.org.is_demo}
       nav={visibleNav(ctx.permissions, ctx.kind)}
       perms={[...ctx.permissions]}

@@ -1,10 +1,10 @@
 "use client";
 
-import { Bell, CloudOff, LogOut, RefreshCw, Search, CheckCheck, Loader2 } from "lucide-react";
+import { Bell, Building2, Check, CloudOff, LogOut, RefreshCw, Search, CheckCheck, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { getNotifications, logout, markNotificationsRead, setCountryFilter } from "@/app/(app)/shell-actions";
+import { getNotifications, logout, markNotificationsRead, setCountryFilter, setOrganization } from "@/app/(app)/shell-actions";
 import { Logo } from "@/components/brand/logo";
 import { Avatar, Kbd } from "@/components/ui/misc";
 import { useT } from "@/i18n/client";
@@ -15,9 +15,11 @@ import { cn } from "@/lib/utils";
 type Country = { id: string; code: string; name: string; flag: string | null };
 type Notif = { id: string; title: string; body: string | null; link: string | null; read_at: string | null; created_at: string; type: string };
 
-export function Topbar({ userId, userName, roleLabel, countries, countryId, showCountrySwitch, unread, onOpenSearch }: {
+export type OrgOption = { id: string; name: string; is_demo: boolean };
+
+export function Topbar({ userId, userName, roleLabel, countries, countryId, showCountrySwitch, unread, onOpenSearch, orgs = [], orgId }: {
   userId: string; userName: string; roleLabel: string; countries: Country[]; countryId: string | null;
-  showCountrySwitch: boolean; unread: number; onOpenSearch: () => void;
+  showCountrySwitch: boolean; unread: number; onOpenSearch: () => void; orgs?: OrgOption[]; orgId?: string;
 }) {
   const { t } = useT();
   return (
@@ -38,7 +40,7 @@ export function Topbar({ userId, userName, roleLabel, countries, countryId, show
       </button>
       <SyncIndicator userId={userId} />
       <NotificationsBell unread={unread} />
-      <UserMenu name={userName} roleLabel={roleLabel} />
+      <UserMenu name={userName} roleLabel={roleLabel} orgs={orgs} orgId={orgId} />
     </header>
   );
 }
@@ -134,8 +136,10 @@ function NotificationsBell({ unread }: { unread: number }) {
   );
 }
 
-function UserMenu({ name, roleLabel }: { name: string; roleLabel: string }) {
+function UserMenu({ name, roleLabel, orgs, orgId }: { name: string; roleLabel: string; orgs: OrgOption[]; orgId?: string }) {
   const { t } = useT();
+  const router = useRouter();
+  const [switching, startSwitch] = useTransition();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -154,11 +158,26 @@ function UserMenu({ name, roleLabel }: { name: string; roleLabel: string }) {
         </span>
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-xl border border-line-strong bg-surface py-1 shadow-2xl animate-fade-up">
+        <div className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-line-strong bg-surface py-1 shadow-2xl animate-fade-up">
           <div className="border-b border-line px-4 py-3">
             <div className="truncate text-sm font-medium">{name}</div>
             <div className="text-xs text-muted">{roleLabel}</div>
           </div>
+          {orgs.length > 1 && (
+            <div className="border-b border-line py-1">
+              <div className="px-4 pb-1 pt-2 text-[10px] uppercase tracking-[0.16em] text-faint">{t("common.organization")}</div>
+              {orgs.map((o) => (
+                <button key={o.id} type="button" disabled={switching}
+                  onClick={() => startSwitch(async () => { await setOrganization(o.id); setOpen(false); router.push("/dashboard"); router.refresh(); })}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-ink-2 hover:bg-surface-2 hover:text-ink">
+                  <Building2 className="h-4 w-4 shrink-0 text-moss" />
+                  <span className="min-w-0 flex-1 truncate">{o.name}</span>
+                  {o.is_demo && <span className="rounded bg-amber/20 px-1 text-[9px] font-bold text-amber">DEMO</span>}
+                  {o.id === orgId && <Check className="h-4 w-4 shrink-0 text-amber" />}
+                </button>
+              ))}
+            </div>
+          )}
           <form action={logout}>
             <button type="submit" className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-ink-2 hover:bg-surface-2 hover:text-ink">
               <LogOut className="h-4 w-4" /> {t("auth.logout")}

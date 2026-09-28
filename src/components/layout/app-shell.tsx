@@ -17,6 +17,8 @@ export type ShellProps = {
   userName: string;
   roleLabel: string;
   orgName: string;
+  orgId: string;
+  orgs: { id: string; name: string; is_demo: boolean }[];
   isDemo: boolean;
   nav: NavGroup[];
   perms: string[];
@@ -53,7 +55,8 @@ export function AppShell(props: ShellProps) {
         <Sidebar groups={props.nav} orgName={props.orgName} isDemo={props.isDemo} />
         <div className="lg:pl-[248px]">
           <Topbar userId={props.userId} userName={props.userName} roleLabel={props.roleLabel} countries={props.countries}
-            countryId={props.countryId} showCountrySwitch={props.showCountrySwitch} unread={props.unread} onOpenSearch={() => setOpen(true)} />
+            countryId={props.countryId} showCountrySwitch={props.showCountrySwitch} unread={props.unread} onOpenSearch={() => setOpen(true)}
+            orgs={props.orgs} orgId={props.orgId} />
           <main id="main" className="mx-auto w-full max-w-[1600px] px-4 pb-28 pt-5 lg:px-8 lg:pb-12 lg:pt-7 animate-fade-in">{props.children}</main>
         </div>
         <MobileNav />
