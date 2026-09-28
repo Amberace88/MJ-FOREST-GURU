@@ -1,0 +1,19 @@
+# MJ Forest Guru — Netlify deployment (Next.js 15, App Router)
+# The Next.js runtime (@netlify/plugin-nextjs / OpenNext adapter) is detected and
+# installed automatically — no plugin entry is needed here.
+# Environment variables are set in the Netlify UI (see .env.example / README), never here.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Scheduled Mapon sync is NOT configured here on purpose: use an external cron
+# (cron-job.org, GitHub Actions, UptimeRobot…) or your own Netlify scheduled
+# function that calls
+#   GET https://app.mjforestguru.com/api/cron/mapon
+#   Authorization: Bearer $CRON_SECRET
+# every 5–15 minutes. See README → "Mapon integration".

@@ -1,26 +1,182 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource/saira-condensed/500.css";
+@import "@fontsource/saira-condensed/600.css";
+@import "@fontsource/saira-condensed/700.css";
 
+/* ==========================================================================
+   MJ FOREST GURU — design tokens
+   Premium dark forestry-industrial: graphite, deep forest green, warm wood,
+   off-white, restrained amber. No neon green.
+   ========================================================================== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0b0f0d;
+  --bg-2: #0f1411;
+  --surface: #141a16;
+  --surface-2: #1a221d;
+  --surface-3: #212a24;
+  --border: #29332d;
+  --border-strong: #37443b;
+  --text: #ece6da;
+  --text-2: #c4bfb3;
+  --muted: #8e978f;
+  --faint: #5f6961;
+
+  --forest-900: #0f2417;
+  --forest-800: #163220;
+  --forest-700: #1f4a2d;
+  --forest-600: #2b6139;
+  --forest-500: #3a7a48;
+  --forest-400: #5a9866;
+  --moss: #8fae6b;
+
+  --wood-700: #5a3f27;
+  --wood-500: #8b6440;
+  --wood-300: #c09a6b;
+
+  --amber: #e2a23b;
+  --amber-soft: #e2a23b22;
+
+  --ok: #5fae6e;
+  --warn: #e3b448;
+  --crit: #e0584f;
+  --off: #737c75;
+  --info: #7fa6c9;
+
+  --radius: 14px;
+  --shadow: 0 1px 0 #ffffff08 inset, 0 10px 30px -12px #000000cc;
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text);
+  --color-ink-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-forest-900: var(--forest-900);
+  --color-forest-800: var(--forest-800);
+  --color-forest-700: var(--forest-700);
+  --color-forest-600: var(--forest-600);
+  --color-forest-500: var(--forest-500);
+  --color-forest-400: var(--forest-400);
+  --color-moss: var(--moss);
+  --color-wood-700: var(--wood-700);
+  --color-wood-500: var(--wood-500);
+  --color-wood-300: var(--wood-300);
+  --color-amber: var(--amber);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-crit: var(--crit);
+  --color-off: var(--off);
+  --color-info: var(--info);
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Saira Condensed", "Inter Variable", ui-sans-serif, sans-serif;
+  --radius-card: var(--radius);
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade-in: fade-in 0.3s ease both;
+  --animate-slide-in-right: slide-in-right 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-slide-up: slide-up 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-pulse-ring: pulse-ring 2s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+@keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slide-in-right { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes slide-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.7; } 80%, 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes shimmer { from { background-position: -400px 0; } to { background-position: 400px 0; } }
 
+html { background: var(--bg); }
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01", "tnum";
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection { background: var(--forest-600); color: var(--text); }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 6px; }
+
+/* scrollbars */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; border: 3px solid var(--bg); }
+
+.font-display { font-family: var(--font-display); letter-spacing: 0.02em; }
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* subtle topographic texture */
+.topo-bg { position: relative; isolation: isolate; }
+.topo-bg::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image: url("/brand/topo.svg"); background-size: 720px; opacity: 0.045;
+}
+.grain::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.05; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+.card {
+  background: linear-gradient(180deg, #ffffff05, transparent 40%), var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.card-hover { transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease; }
+.card-hover:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 800px 100%;
+  animation: var(--animate-shimmer);
+  border-radius: 8px;
+}
+
+.hairline { background: linear-gradient(90deg, transparent, var(--border-strong), transparent); height: 1px; }
+
+/* native <dialog> */
+dialog::backdrop { background: #000000b0; backdrop-filter: blur(3px); }
+dialog[open] { animation: var(--animate-fade-up); }
+
+/* inputs */
+.field {
+  width: 100%; background: var(--bg-2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 10px; padding: 0.625rem 0.8rem; font-size: 0.925rem; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field::placeholder { color: var(--faint); }
+.field:hover { border-color: var(--border-strong); }
+.field:focus { outline: none; border-color: var(--forest-400); box-shadow: 0 0 0 3px #3a7a4833; }
+select.field { appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e978f' stroke-width='2.5'><path d='m6 9 6 6 6-6'/></svg>"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2rem; }
+input[type="date"].field, input[type="datetime-local"].field, input[type="time"].field { color-scheme: dark; }
+
+/* maplibre dark polish */
+.maplibregl-popup-content { background: var(--surface-2) !important; color: var(--text); border: 1px solid var(--border-strong); border-radius: 12px !important; box-shadow: var(--shadow) !important; padding: 12px 14px !important; }
+.maplibregl-popup-tip { border-top-color: var(--surface-2) !important; border-bottom-color: var(--surface-2) !important; }
+.maplibregl-popup-close-button { color: var(--muted); font-size: 18px; padding: 2px 8px; }
+.maplibregl-ctrl-group { background: var(--surface-2) !important; border: 1px solid var(--border) !important; }
+.maplibregl-ctrl-group button span { filter: invert(0.9); }
+.maplibregl-ctrl-attrib { background: #0b0f0dcc !important; color: var(--muted) !important; font-size: 10px; }
+.maplibregl-ctrl-attrib a { color: var(--text-2) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+}
+
+/* print: management reports */
+@media print {
+  :root { --bg: #fff; --surface: #fff; --surface-2: #f6f5f1; --text: #111; --text-2: #333; --muted: #555; --border: #ddd; }
+  body { background: #fff !important; color: #111 !important; }
+  .no-print { display: none !important; }
+  .card { box-shadow: none !important; break-inside: avoid; }
+  .print-page { padding: 0 !important; }
 }

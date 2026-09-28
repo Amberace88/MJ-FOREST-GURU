@@ -1,0 +1,161 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { dbFail, fail, parseForm, zf, type ActionResult } from "@/lib/actions";
+import { requireOrg } from "@/lib/context";
+import { inviteUser, resendInvitation } from "@/lib/invite";
+import { INVITABLE_ROLES, PERMISSIONS, ROLE_KEYS, type RoleKey } from "@/lib/permissions";
+
+const PATH = "/settings/users";
+const PRIVILEGED: readonly string[] = ["owner", "admin"];
+const uuid = z.string().uuid();
+
+/* ------------------------------------------------------------ invite */
+const inviteSchema = z.object({
+  email: zf.email(),
+  full_name: zf.reqText(200),
+  role: z.enum(INVITABLE_ROLES as [RoleKey, ...RoleKey[]]),
+  employee_id: zf.optUuid(),
+});
+
+export async function inviteUserAction(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
+  const parsed = parseForm(inviteSchema, fd);
+  if (!parsed.ok) return parsed.result;
+  const d = parsed.data;
+  const res = await inviteUser({ ctx, email: d.email, fullName: d.full_name, role: d.role, employeeId: d.employee_id ?? null });
+  if (res.ok) {
+    revalidatePath(PATH);
+    revalidatePath("/employees");
+    return { ok: true, message: res.message };
+  }
+  return res;
+}
+
+export async function resendInvitationAction(id: string, _prev: ActionResult, _fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!uuid.safeParse(id).success) return fail(ctx.t("errors.validation"));
+  const res = await resendInvitation(ctx, id);
+  if (res.ok) revalidatePath(PATH);
+  return res;
+}
+
+export async function revokeInvitation(id: string, _prev: ActionResult, _fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
+  if (!uuid.safeParse(id).success) return fail(ctx.t("errors.validation"));
+  const { data: inv } = await ctx.supabase.from("invitations").select("id, user_id, accepted_at, revoked_at")
+    .eq("id", id).eq("organization_id", ctx.org.id).maybeSingle();
+  if (!inv || inv.accepted_at || inv.revoked_at) return fail(ctx.t("errors.notFound"));
+
+  const { error } = await ctx.supabase.from("invitations").update({ revoked_at: new Date().toISOString() }).eq("id", id).eq("organization_id", ctx.org.id);
+  if (error) return dbFail("users.revoke", error);
+
+  // The account was created at invite time: if it never signed in, block its membership too.
+  if (inv.user_id && inv.user_id !== ctx.user.id) {
+    const { data: profile } = await ctx.supabase.from("profiles").select("last_login_at").eq("id", inv.user_id).maybeSingle();
+    if (!profile?.last_login_at) {
+      const { error: mErr } = await ctx.supabase.from("organization_members").update({ status: "disabled" })
+        .eq("organization_id", ctx.org.id).eq("user_id", inv.user_id);
+      if (mErr) return dbFail("users.revoke_member", mErr);
+    }
+  }
+  revalidatePath(PATH);
+  return { ok: true, message: ctx.t("users.revoked") };
+}
+
+/* ------------------------------------------------------------ members */
+async function rolesOf(ctx: Awaited<ReturnType<typeof requireOrg>>, userId: string) {
+  const { data } = await ctx.supabase.from("user_roles").select("id, role_id, roles(key)").eq("organization_id", ctx.org.id).eq("user_id", userId);
+  return (data ?? []).map((r) => ({ id: r.id, role_id: r.role_id, key: (r.roles as { key: string } | null)?.key ?? "" }));
+}
+
+async function activeOwnerCount(ctx: Awaited<ReturnType<typeof requireOrg>>, excludeUser: string) {
+  const { data: ownerRole } = await ctx.supabase.from("roles").select("id").eq("organization_id", ctx.org.id).eq("key", "owner").maybeSingle();
+  if (!ownerRole) return 0;
+  const { data: owners } = await ctx.supabase.from("user_roles").select("user_id").eq("organization_id", ctx.org.id).eq("role_id", ownerRole.id);
+  const ids = (owners ?? []).map((o) => o.user_id).filter((u) => u !== excludeUser);
+  if (ids.length === 0) return 0;
+  const { count } = await ctx.supabase.from("organization_members").select("user_id", { count: "exact", head: true })
+    .eq("organization_id", ctx.org.id).eq("status", "active").in("user_id", ids);
+  return count ?? 0;
+}
+
+export async function changeMemberRole(userId: string, _prev: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
+  if (!uuid.safeParse(userId).success) return fail(ctx.t("errors.validation"));
+  if (userId === ctx.user.id) return fail(ctx.t("users.cannotEditSelf"));
+  const parsed = parseForm(z.object({ role: z.enum(ROLE_KEYS) }), fd);
+  if (!parsed.ok) return parsed.result;
+  const roleKey = parsed.data.role;
+
+  const current = await rolesOf(ctx, userId);
+  const touchesPrivileged = PRIVILEGED.includes(roleKey) || current.some((r) => PRIVILEGED.includes(r.key));
+  if (touchesPrivileged && !ctx.can("manage_permissions")) return fail(ctx.t("users.privilegedRole"));
+
+  const { data: member } = await ctx.supabase.from("organization_members").select("user_id").eq("organization_id", ctx.org.id).eq("user_id", userId).maybeSingle();
+  if (!member) return fail(ctx.t("errors.notFound"));
+  const { data: role } = await ctx.supabase.from("roles").select("id").eq("organization_id", ctx.org.id).eq("key", roleKey).maybeSingle();
+  if (!role) return fail(ctx.t("errors.notFound"));
+
+  let insertedId: string | null = null;
+  if (!current.some((r) => r.role_id === role.id)) {
+    const { data: ins, error } = await ctx.supabase.from("user_roles")
+      .insert({ organization_id: ctx.org.id, user_id: userId, role_id: role.id, granted_by: ctx.user.id }).select("id").single();
+    if (error) return dbFail("users.role_grant", error);
+    insertedId = ins.id;
+  }
+  // One statement: the DB guard (LAST_OWNER) rejects it atomically if the last owner would disappear.
+  const { error: delErr } = await ctx.supabase.from("user_roles").delete()
+    .eq("organization_id", ctx.org.id).eq("user_id", userId).neq("role_id", role.id);
+  if (delErr) {
+    if (insertedId) await ctx.supabase.from("user_roles").delete().eq("id", insertedId);
+    return dbFail("users.role_revoke", delErr);
+  }
+  revalidatePath(PATH);
+  return { ok: true, message: ctx.t("users.roleChanged") };
+}
+
+export async function setMemberStatus(userId: string, status: "active" | "disabled", _prev: ActionResult, _fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
+  if (!uuid.safeParse(userId).success || !["active", "disabled"].includes(status)) return fail(ctx.t("errors.validation"));
+  if (userId === ctx.user.id) return fail(ctx.t("users.cannotEditSelf"));
+
+  const current = await rolesOf(ctx, userId);
+  if (current.some((r) => PRIVILEGED.includes(r.key)) && !ctx.can("manage_permissions")) return fail(ctx.t("users.privilegedRole"));
+  if (status === "disabled" && current.some((r) => r.key === "owner") && (await activeOwnerCount(ctx, userId)) === 0) {
+    return fail(ctx.t("errors.lastOwner"));
+  }
+  const { error } = await ctx.supabase.from("organization_members").update({ status })
+    .eq("organization_id", ctx.org.id).eq("user_id", userId);
+  if (error) return dbFail("users.status", error);
+  revalidatePath(PATH);
+  return { ok: true, message: status === "disabled" ? ctx.t("users.disabled") : ctx.t("users.enabled") };
+}
+
+/* ------------------------------------------------------------ permission matrix */
+export async function setRolePermission(roleId: string, permission: string, enabled: boolean): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("manage_permissions")) return fail(ctx.t("errors.permission"));
+  if (!uuid.safeParse(roleId).success || !(PERMISSIONS as readonly string[]).includes(permission) || typeof enabled !== "boolean") {
+    return fail(ctx.t("errors.validation"));
+  }
+  const { data: role } = await ctx.supabase.from("roles").select("id, key").eq("id", roleId).eq("organization_id", ctx.org.id).maybeSingle();
+  if (!role) return fail(ctx.t("errors.notFound"));
+  if (role.key === "owner") return fail(ctx.t("users.ownerLocked"));
+
+  if (enabled) {
+    const { error } = await ctx.supabase.from("role_permissions").insert({ role_id: roleId, permission_key: permission, organization_id: ctx.org.id });
+    if (error && error.code !== "23505") return dbFail("users.perm_grant", error);
+  } else {
+    const { error } = await ctx.supabase.from("role_permissions").delete()
+      .eq("role_id", roleId).eq("permission_key", permission).eq("organization_id", ctx.org.id);
+    if (error) return dbFail("users.perm_revoke", error);
+  }
+  revalidatePath(PATH);
+  return { ok: true };
+}

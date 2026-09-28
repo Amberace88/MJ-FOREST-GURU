@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="lv" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>Paroles atjaunošana — MJ Forest Guru</title>
+<!--
+  MJ Forest Guru — Supabase Auth e-mail template (recovery).
+  Paste into Supabase Dashboard → Authentication → Email Templates → "Reset Password"
+  (or reference it from supabase/config.toml: [auth.email.template.recovery]).
+  Link format is handled by src/app/auth/confirm/route.ts (token_hash verification,
+  works on any device, no PKCE verifier needed).
+-->
+</head>
+<body style="margin:0;padding:0;background-color:#0b120e;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#0b120e;">Saite jaunas paroles iestatīšanai MJ Forest Guru kontam.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0b120e;background-image:radial-gradient(circle at 20% 0%,#16301f 0%,#0b120e 55%);">
+  <tr>
+    <td align="center" style="padding:40px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+        <tr>
+          <td align="center" style="padding:0 0 28px 0;">
+            <img src="{{ .SiteURL }}/brand/logo-dark-bg.png" width="200" alt="MJ Forest Guru" style="display:block;width:200px;max-width:70%;height:auto;border:0;outline:none;text-decoration:none;">
+          </td>
+        </tr>
+        <tr>
+          <td style="background-color:#111a14;border:1px solid #243529;border-radius:16px;padding:36px 32px;font-family:Inter,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#e8efe9;">
+            <p style="margin:0 0 8px 0;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#e2a23b;font-weight:600;">Paroles atjaunošana</p>
+            <h1 style="margin:0 0 16px 0;font-family:'Saira Condensed','Arial Narrow',Arial,sans-serif;font-size:28px;line-height:1.15;letter-spacing:1px;text-transform:uppercase;color:#f3f7f4;font-weight:700;">Iestatiet jaunu paroli</h1>
+            <p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#c9d6cc;">Labdien!</p><p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#c9d6cc;">Saņēmām pieprasījumu mainīt paroli jūsu MJ Forest Guru kontam (<span style="color:#f3f7f4;">{{ .Email }}</span>).</p><p style="margin:0 0 12px 0;font-size:15px;line-height:1.65;color:#c9d6cc;">Nospiediet pogu, lai iestatītu jaunu paroli.</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 8px 0;">
+              <tr>
+                <td align="center" bgcolor="#2b6139" style="border-radius:10px;background-color:#2b6139;">
+                  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=%2Freset-password" target="_blank" style="display:inline-block;padding:14px 28px;font-family:Inter,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:10px;">Mainīt paroli</a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:20px 0 0 0;font-size:13px;line-height:1.6;color:#8fa396;">Ja paroles maiņu nepieprasījāt jūs, ignorējiet šo e-pastu — jūsu pašreizējā parole paliks nemainīta. Saite ir vienreizēja un derīga ierobežotu laiku.</p>
+            <p style="margin:16px 0 0 0;font-size:12px;line-height:1.6;color:#6b7f71;">Ja poga nedarbojas, atveriet šo saiti pārlūkā:<br><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=%2Freset-password" style="color:#9fc7a8;word-break:break-all;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=%2Freset-password</a></p>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:24px 12px 0 12px;font-family:Inter,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#6b7f71;">
+            MJ Forest Guru · Privāta mežsaimniecības operāciju platforma<br>
+            Šis ir automātisks e-pasts. Ja jūs to negaidījāt, vienkārši ignorējiet to — bez saites nekas netiks mainīts.<br>
+            <span style="letter-spacing:2px;text-transform:uppercase;font-size:10px;color:#4f6356;">People. Machines. Projects. Operations.</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
