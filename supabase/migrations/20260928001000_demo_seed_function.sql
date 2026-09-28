@@ -403,7 +403,8 @@ begin
          (select engine_hours from public.machines where id = ma.id),
          exists (select 1 from public.work_logs wl where wl.machine_id = ma.id and wl.ended_at is null),
          'manual'
-  from _mach ma join _proj pr on pr.code = ma.proj cross join generate_series(0, 11) k;
+  from _mach ma join _proj pr on pr.code = ma.proj cross join generate_series(0, 11) k
+  on conflict (machine_id, recorded_at, source) where machine_id is not null do nothing;
 
   select jsonb_build_object(
     'employees', (select count(*) from public.employees where organization_id = p_org and is_demo),
