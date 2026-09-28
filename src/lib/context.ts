@@ -59,6 +59,7 @@ async function loadContext() {
       .select("id, first_name, last_name, full_name, country_id, team_id, photo_path, job_title, status")
       .eq("organization_id", org.id)
       .eq("user_id", user.id)
+      .is("deleted_at", null)
       .maybeSingle(),
     supabase.from("profiles").select("full_name, email, locale, timezone, avatar_path").eq("id", user.id).maybeSingle(),
     supabase.from("organization_settings").select("*").eq("organization_id", org.id).maybeSingle(),

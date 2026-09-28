@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
   const admin = createAdminClient();
   const { data: inv } = await admin.from("invitations").select("id, email, user_id, expires_at, accepted_at, revoked_at")
     .eq("token_hash", hashInviteToken(token)).maybeSingle();
-  if (!inv || inv.accepted_at || inv.revoked_at || !inv.user_id || new Date(inv.expires_at) < new Date()) return fail("invite");
+  if (!inv || !inv.email || inv.accepted_at || inv.revoked_at || !inv.user_id || new Date(inv.expires_at) < new Date()) return fail("invite");
 
   const { data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: "magiclink", email: inv.email });
   if (linkErr || !link.properties?.hashed_token) {

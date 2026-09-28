@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { dbFail, fail, parseForm, zf, type ActionResult } from "@/lib/actions";
 import { requireOrg } from "@/lib/context";
-import { inviteUser, resendInvitation } from "@/lib/invite";
+import { grantableRoles, inviteUser, resendInvitation } from "@/lib/invite";
 import { PERMISSIONS, ROLE_KEYS, type RoleKey } from "@/lib/permissions";
 
 const PATH = "/settings/users";
@@ -63,6 +63,63 @@ export async function revokeInvitation(id: string, _prev: ActionResult, _fd: For
   }
   revalidatePath(PATH);
   return { ok: true, message: ctx.t("users.revoked") };
+}
+
+/* ------------------------------------------------------------ prepared accounts (e-mail later) */
+const prepareSchema = z.object({
+  full_name: zf.reqText(200),
+  role: z.enum(ROLE_KEYS as unknown as [RoleKey, ...RoleKey[]]),
+});
+
+/** Reserve a seat (name + role) before the person's e-mail is known. */
+export async function prepareAccountAction(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
+  const parsed = parseForm(prepareSchema, fd);
+  if (!parsed.ok) return parsed.result;
+  if (!grantableRoles(ctx).includes(parsed.data.role)) return fail(ctx.t("users.privilegedRole"));
+  const { error } = await ctx.supabase.from("invitations").insert({
+    organization_id: ctx.org.id, email: null, full_name: parsed.data.full_name.trim(), role_key: parsed.data.role,
+    invited_by: ctx.user.id, expires_at: new Date(Date.now() + 3650 * 86_400_000).toISOString(),
+  });
+  if (error) return dbFail("users.prepare", error);
+  revalidatePath(PATH);
+  revalidatePath("/setup");
+  return { ok: true, message: ctx.t("users.prepared.saved") };
+}
+
+const activateSchema = z.object({ email: zf.email(), full_name: zf.reqText(200) });
+
+/** Enter the e-mail of a prepared account → create the account + one-time link, close the draft. */
+export async function activatePreparedAction(id: string, _prev: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
+  if (!uuid.safeParse(id).success) return fail(ctx.t("errors.validation"));
+  const parsed = parseForm(activateSchema, fd);
+  if (!parsed.ok) return parsed.result;
+  const { data: draft } = await ctx.supabase.from("invitations").select("id, role_key, email, revoked_at")
+    .eq("id", id).eq("organization_id", ctx.org.id).maybeSingle();
+  if (!draft || draft.email || draft.revoked_at) return fail(ctx.t("errors.notFound"));
+  const role = draft.role_key as RoleKey;
+  const res = await inviteUser({ ctx, email: parsed.data.email, fullName: parsed.data.full_name, role });
+  if (res.ok) {
+    await ctx.supabase.from("invitations").update({ revoked_at: new Date().toISOString() }).eq("id", id).eq("organization_id", ctx.org.id);
+    revalidatePath(PATH);
+    revalidatePath("/setup");
+  }
+  return res;
+}
+
+export async function removePreparedAction(id: string, _prev: ActionResult, _fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
+  if (!uuid.safeParse(id).success) return fail(ctx.t("errors.validation"));
+  const { error } = await ctx.supabase.from("invitations").update({ revoked_at: new Date().toISOString() })
+    .eq("id", id).eq("organization_id", ctx.org.id).is("email", null);
+  if (error) return dbFail("users.prepared_remove", error);
+  revalidatePath(PATH);
+  revalidatePath("/setup");
+  return { ok: true, message: ctx.t("users.prepared.removed") };
 }
 
 /* ------------------------------------------------------------ members */

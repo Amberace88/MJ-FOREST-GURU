@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Lock, RotateCw, ShieldOff, ShieldCheck, UserCog, UserPlus, X } from "lucide-react";
+import { Check, Lock, MailPlus, RotateCw, ShieldOff, ShieldCheck, Trash2, UserCog, UserPlus, UserRoundPlus, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ActionButton, FormDialog, FormGrid, Input, Select, type FormAction } from "@/components/ui/form";
@@ -9,7 +9,9 @@ import { toast } from "@/components/ui/toast";
 import { useT } from "@/i18n/client";
 import { PERMISSION_GROUPS, type RoleKey } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
-import { changeMemberRole, inviteUserAction, resendInvitationAction, revokeInvitation, setMemberStatus, setRolePermission } from "./actions";
+import { Avatar } from "@/components/ui/misc";
+import { Badge } from "@/components/ui/badge";
+import { activatePreparedAction, changeMemberRole, inviteUserAction, prepareAccountAction, removePreparedAction, resendInvitationAction, revokeInvitation, setMemberStatus, setRolePermission } from "./actions";
 
 /* ------------------------------------------------------------ invite */
 
@@ -54,6 +56,75 @@ function InviteFields({ roles, employees }: { roles: RoleKey[]; employees: Invit
       </FormGrid>
       <Select name="role" label={t("users.role")} defaultValue="employee" options={roles.map((r) => ({ value: r, label: label("users.roleNames", r) }))} />
     </div>
+  );
+}
+
+/* ------------------------------------------------------------ prepared accounts */
+
+export type PreparedAccount = { id: string; full_name: string; role_key: string };
+
+/**
+ * Seats reserved by name + role (e.g. the owners Māris and Jūlija). The admin enters
+ * the e-mail later → the account is created and a one-time link is shown.
+ */
+export function PreparedAccounts({ items, roles, disabled, allowAdd = true }: {
+  items: PreparedAccount[]; roles: RoleKey[]; disabled?: boolean; allowAdd?: boolean;
+}) {
+  const { t, label } = useT();
+  if (!items.length && !allowAdd) return null;
+  return (
+    <section className="card overflow-hidden animate-fade-up">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+        <div>
+          <h2 className="font-display text-lg uppercase tracking-wide text-ink">{t("users.prepared.title")}</h2>
+          <p className="text-sm text-muted">{t("users.prepared.hint")}</p>
+        </div>
+        {allowAdd && (
+          <FormDialog size="sm" title={t("users.prepared.add")} action={prepareAccountAction as FormAction}
+            trigger={<Button variant="secondary" size="sm"><UserRoundPlus className="h-4 w-4" /> {t("users.prepared.add")}</Button>}>
+            <Input name="full_name" label={t("users.fullName")} required minLength={2} maxLength={200} autoComplete="off" />
+            <Select name="role" label={t("users.role")} defaultValue="employee" options={roles.map((r) => ({ value: r, label: label("users.roleNames", r) }))} />
+          </FormDialog>
+        )}
+      </header>
+      {items.length === 0 ? (
+        <p className="px-5 py-6 text-sm text-muted">{t("users.prepared.empty")}</p>
+      ) : (
+        <ul className="grid gap-3 p-4 sm:grid-cols-2">
+          {items.map((p, i) => (
+            <li key={p.id} style={{ animationDelay: `${i * 60}ms` }}
+              className="group flex items-center gap-3 rounded-xl border border-dashed border-line-strong bg-surface-2/40 px-4 py-3 transition-colors hover:border-amber/50 animate-fade-up">
+              <Avatar name={p.full_name} size={40} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium text-ink">{p.full_name}</span>
+                <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <Badge tone={p.role_key === "owner" ? "amber" : p.role_key === "admin" ? "forest" : "neutral"}>{label("users.roleNames", p.role_key)}</Badge>
+                  <Badge tone="warn" dot pulse>{t("users.prepared.waiting")}</Badge>
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-1">
+                {disabled ? (
+                  <Button size="sm" disabled><MailPlus className="h-4 w-4" /></Button>
+                ) : (
+                  <InviteLinkDialog title={`${t("users.prepared.activate")}: ${p.full_name}`} description={t("users.prepared.activateHint")}
+                    action={activatePreparedAction.bind(null, p.id) as FormAction} submitLabel={t("users.createAccount")}
+                    trigger={<Button size="sm"><MailPlus className="h-4 w-4" /><span className="hidden md:inline">{t("users.prepared.activate")}</span></Button>}>
+                    <FormGrid>
+                      <Input name="full_name" label={t("users.fullName")} defaultValue={p.full_name} required minLength={2} maxLength={200} autoComplete="off" />
+                      <Input name="email" type="email" label={t("users.email")} required maxLength={200} autoComplete="off" inputMode="email" autoFocus />
+                    </FormGrid>
+                  </InviteLinkDialog>
+                )}
+                <ActionButton action={removePreparedAction.bind(null, p.id) as FormAction} variant="ghost" size="sm" confirm={t("users.prepared.confirmRemove")}
+                  className="text-muted hover:text-crit">
+                  <Trash2 className="h-4 w-4" />
+                </ActionButton>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

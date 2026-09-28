@@ -19,7 +19,7 @@ import { NewProjectDialog } from "../projects/components";
 import { CompaniesPanel } from "../settings/companies-panel";
 import { CompanyForm, CountryDialog, CountryToggle, WorkRulesForm, type CountryRow } from "../settings/components";
 import { MaponActions, MaponKeyForm } from "../settings/integrations/components";
-import { InviteDialog } from "../settings/users/components";
+import { InviteDialog, PreparedAccounts } from "../settings/users/components";
 import { completeSetup } from "./actions";
 
 export const metadata: Metadata = { title: "Sistēmas iestatīšana" };
@@ -140,20 +140,29 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
     );
   } else if (step === 6) {
     const [invRes, freeRes] = await Promise.all([
-      sb.from("invitations").select("id, email, role_key, expires_at, accepted_at").eq("organization_id", org).order("created_at", { ascending: false }).limit(50),
+      sb.from("invitations").select("id, email, full_name, role_key, expires_at, accepted_at").eq("organization_id", org).is("revoked_at", null)
+        .order("created_at", { ascending: false }).limit(50),
       sb.from("employees").select("id, full_name, email").eq("organization_id", org).is("user_id", null).is("deleted_at", null).order("full_name").limit(500),
     ]);
     summary = <InviteDialog roles={grantableRoles(ctx)} disabled={!hasServiceRole()} employees={(freeRes.data ?? []).map((e) => ({ id: e.id, full_name: e.full_name, email: e.email }))} />;
-    body = (invRes.data ?? []).length ? (
+    const all = invRes.data ?? [];
+    const drafts = all.filter((i) => !i.email).reverse().map((i) => ({ id: i.id, full_name: i.full_name ?? "—", role_key: i.role_key }));
+    const sent = all.filter((i) => i.email);
+    body = (
+      <div className="space-y-4">
+      <PreparedAccounts items={drafts} roles={grantableRoles(ctx)} disabled={!hasServiceRole()} />
+      {sent.length ? (
       <ul className="divide-y divide-line rounded-xl border border-line">
-        {(invRes.data ?? []).map((i) => (
+        {sent.map((i) => (
           <li key={i.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
             <span className="truncate">{i.email}</span>
             <Badge tone={i.accepted_at ? "ok" : "warn"}>{ctx.label("users.roleNames", i.role_key)}</Badge>
           </li>
         ))}
       </ul>
-    ) : <p className="rounded-xl border border-dashed border-line-strong px-4 py-8 text-center text-sm text-muted">{ctx.t("setup.inviteText")}</p>;
+    ) : <p className="rounded-xl border border-dashed border-line-strong px-4 py-8 text-center text-sm text-muted">{ctx.t("setup.inviteText")}</p>}
+      </div>
+    );
   }
 
   const last = step === steps.length - 1;

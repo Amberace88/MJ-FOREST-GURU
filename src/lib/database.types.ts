@@ -1190,7 +1190,7 @@ export type Database = {
         Row: {
           id: string
           organization_id: string
-          email: string
+          email: string | null
           employee_id: string | null
           role_key: string
           invited_by: string | null
@@ -1201,11 +1201,12 @@ export type Database = {
           created_at: string
           token_hash: string | null
           opened_at: string | null
+          full_name: string | null
         }
         Insert: {
           id?: string
           organization_id: string
-          email: string
+          email?: string | null
           employee_id?: string | null
           role_key: string
           invited_by?: string | null
@@ -1216,11 +1217,12 @@ export type Database = {
           created_at?: string
           token_hash?: string | null
           opened_at?: string | null
+          full_name?: string | null
         }
         Update: {
           id?: string
           organization_id?: string
-          email?: string
+          email?: string | null
           employee_id?: string | null
           role_key?: string
           invited_by?: string | null
@@ -1231,6 +1233,7 @@ export type Database = {
           created_at?: string
           token_hash?: string | null
           opened_at?: string | null
+          full_name?: string | null
         }
         Relationships: [
           {

@@ -8,11 +8,12 @@ import { Avatar, EmptyState, PageHeader, TabNav } from "@/components/ui/misc";
 import { DataTable } from "@/components/ui/table";
 import { requirePermission } from "@/lib/context";
 import { hasServiceRole } from "@/lib/env.server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { fmtDateTime, fmtRelative } from "@/lib/format";
 import { grantableRoles } from "@/lib/invite";
 import { ROLE_KEYS, type RoleKey } from "@/lib/permissions";
 import { sp as one, statusTone } from "@/lib/utils";
-import { ChangeRoleDialog, InvitationActions, InviteDialog, MemberStatusButton, PermissionMatrix, type MatrixRole } from "./components";
+import { ChangeRoleDialog, InvitationActions, InviteDialog, MemberStatusButton, PermissionMatrix, PreparedAccounts, type MatrixRole } from "./components";
 
 export const metadata: Metadata = { title: "Lietotāji un piekļuves" };
 
@@ -23,7 +24,20 @@ type Tab = (typeof TABS)[number];
 type MemberView = {
   userId: string; name: string; email: string | null; roles: string[]; primaryRole: string;
   status: "invited" | "active" | "disabled"; lastLogin: string | null; employee: { id: string; name: string } | null; isSelf: boolean;
+  isDeveloper: boolean;
 };
+
+/** Platform developers (app_metadata.platform_role = developer) — shown apart from the business roles. */
+async function developerIds(userIds: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  if (!userIds.length || !hasServiceRole()) return out;
+  try {
+    const admin = createAdminClient();
+    const res = await Promise.all(userIds.map((id) => admin.auth.admin.getUserById(id)));
+    for (const r of res) if (r.data.user?.app_metadata?.platform_role === "developer") out.add(r.data.user.id);
+  } catch { /* label only — never block the page */ }
+  return out;
+}
 
 type InvitationStatus = "pending" | "accepted" | "expired" | "revoked";
 
@@ -39,14 +53,17 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
   const sb = ctx.supabase;
   const org = ctx.org.id;
 
-  const [rolesRes, membersRes, userRolesRes, invitesRes, rolePermsRes] = await Promise.all([
+  const [rolesRes, membersRes, userRolesRes, invitesRes, rolePermsRes, preparedRes] = await Promise.all([
     sb.from("roles").select("id, key, name, rank").eq("organization_id", org).order("rank", { ascending: false }),
     canUsers ? sb.from("organization_members").select("user_id, status, invited_at, joined_at, last_login_at").eq("organization_id", org) : Promise.resolve({ data: [] }),
     canUsers ? sb.from("user_roles").select("user_id, role_id").eq("organization_id", org) : Promise.resolve({ data: [] }),
     canUsers ? sb.from("invitations").select("id, email, role_key, user_id, invited_by, expires_at, accepted_at, revoked_at, created_at")
-      .eq("organization_id", org).order("created_at", { ascending: false }).limit(200) : Promise.resolve({ data: [] }),
+      .eq("organization_id", org).not("email", "is", null).order("created_at", { ascending: false }).limit(200) : Promise.resolve({ data: [] }),
     tab === "permissions" ? sb.from("role_permissions").select("role_id, permission_key").eq("organization_id", org) : Promise.resolve({ data: [] }),
+    canUsers ? sb.from("invitations").select("id, full_name, role_key").eq("organization_id", org).is("email", null).is("revoked_at", null)
+      .order("created_at") : Promise.resolve({ data: [] }),
   ]);
+  const prepared = (preparedRes.data ?? []).map((p) => ({ id: p.id, full_name: p.full_name ?? "—", role_key: p.role_key }));
 
   const roles = rolesRes.data ?? [];
   const roleById = new Map(roles.map((r) => [r.id, r]));
@@ -61,6 +78,8 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
       ? sb.from("employees").select("id, full_name, email").eq("organization_id", org).is("user_id", null).is("deleted_at", null).is("archived_at", null).order("full_name").limit(500)
       : Promise.resolve({ data: [] }),
   ]);
+  const developers = await developerIds(members.map((m) => m.user_id));
+  const viewerIsDeveloper = ctx.user.app_metadata?.platform_role === "developer";
   const profiles = new Map((profilesRes.data ?? []).map((p) => [p.id, p]));
   const employeeByUser = new Map((employeesRes.data ?? []).map((e) => [e.user_id as string, e]));
 
@@ -91,8 +110,9 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
       userId: m.user_id, name: p?.full_name || emp?.full_name || p?.email || "—", email: p?.email ?? null, roles: userRoles,
       primaryRole: userRoles[0] ?? "employee", status, lastLogin, employee: emp ? { id: emp.id, name: emp.full_name ?? "" } : null,
       isSelf: m.user_id === ctx.user.id,
+      isDeveloper: developers.has(m.user_id),
     };
-  }).sort((a, b) => rank(b.primaryRole) - rank(a.primaryRole) || a.name.localeCompare(b.name, "lv"));
+  }).sort((a, b) => Number(a.isDeveloper) - Number(b.isDeveloper) || rank(b.primaryRole) - rank(a.primaryRole) || a.name.localeCompare(b.name, "lv"));
 
   const assignableRoles: RoleKey[] = ROLE_KEYS.filter((r) => canPerms || (r !== "owner" && r !== "admin"));
   const invitableRoles: RoleKey[] = grantableRoles(ctx);
@@ -111,6 +131,8 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
   let content: ReactNode;
   if (tab === "members") {
     content = (
+      <div className="space-y-5">
+      <PreparedAccounts items={prepared} roles={invitableRoles} disabled={!serviceKey} />
       <DataTable rows={memberRows} rowKey={(r) => r.userId}
         empty={<EmptyState icon={<Users className="h-6 w-6" />} title={ctx.t("users.empty")} />}
         columns={[
@@ -128,7 +150,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
           ) },
           { key: "roles", header: ctx.t("users.roles"), cell: (r) => (
             <span className="flex flex-wrap justify-end gap-1 md:justify-start">
-              {r.roles.length === 0 ? <span className="text-faint">—</span> : r.roles.map((k) => (
+              {r.isDeveloper ? <Badge tone="info">{ctx.t("users.developer")}</Badge> : r.roles.length === 0 ? <span className="text-faint">—</span> : r.roles.map((k) => (
                 <Badge key={k} tone={k === "owner" ? "amber" : k === "admin" ? "forest" : "neutral"}>{ctx.label("users.roleNames", k)}</Badge>
               ))}
             </span>
@@ -140,7 +162,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
           { key: "employee", header: ctx.t("users.employee"), hideOnMobile: true, cell: (r) => r.employee
             ? <Link href={`/employees/${r.employee.id}`} className="text-ink-2 hover:text-amber">{r.employee.name}</Link>
             : <span className="text-faint">—</span> },
-          { key: "actions", header: <span className="sr-only">{ctx.t("common.actions")}</span>, align: "right", cell: (r) => r.isSelf ? null : (
+          { key: "actions", header: <span className="sr-only">{ctx.t("common.actions")}</span>, align: "right", cell: (r) => r.isSelf || (r.isDeveloper && !viewerIsDeveloper) ? null : (
             <span className="inline-flex items-center gap-1">
               {(canPerms || !r.roles.some((k) => k === "owner" || k === "admin")) && (
                 <>
@@ -151,6 +173,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
             </span>
           ) },
         ]} />
+      </div>
     );
   } else if (tab === "invitations") {
     const rows = invites.map((i) => ({ ...i, st: invitationStatus(i) }));
