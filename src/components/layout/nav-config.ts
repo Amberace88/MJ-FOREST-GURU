@@ -17,6 +17,7 @@ export const NAV: NavGroup[] = [
   { key: "command", label: "nav.groups.command", items: [
     { key: "dashboard", href: "/dashboard", label: "nav.dashboard" },
     { key: "map", href: "/map", label: "nav.liveMap", any: ["view_gps", "view_live_gps"] },
+    { key: "forestMap", href: "/forest-map", label: "nav.forestMap", any: ["manage_projects", "view_finance"] },
     { key: "alerts", href: "/alerts", label: "nav.alerts", kinds: ["owner", "manager", "foreman", "mechanic"] },
   ] },
   { key: "operations", label: "nav.groups.operations", items: [

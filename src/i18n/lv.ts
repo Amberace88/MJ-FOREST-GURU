@@ -148,6 +148,7 @@ export const lv = {
     training: "Apmācības",
     analytics: "Analītika",
     calculators: "Kalkulatori",
+    forestMap: "Meža karte",
     settings: "Iestatījumi",
     users: "Lietotāji un piekļuves",
     integrations: "Integrācijas",

@@ -1,60 +1,21 @@
 "use client";
 
 import "maplibre-gl/dist/maplibre-gl.css";
-import { Layers, Maximize2, Satellite, Map as MapIcon, TriangleAlert } from "lucide-react";
+import { Layers, Maximize2, Satellite, Map as MapIcon, Mountain, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/i18n/client";
-import { publicEnv } from "@/lib/env";
 import type { MapMarker } from "@/lib/map-data";
 import { cn } from "@/lib/utils";
+import { addBoundaries, loadMaplibre, baseStyle, REGION_BOUNDS, regionBounds, trackRegionHover, type BaseKind } from "./map-kit";
+import { MapSearch, type SearchPick } from "./map-search";
+import { PointInfo, pointPopupHtml } from "./point-info";
 
 type MLMap = import("maplibre-gl").Map;
 type MLMarker = import("maplibre-gl").Marker;
 
-/** Operating regions (country code → [west, south, east, north]). */
-export const REGION_BOUNDS: Record<string, [number, number, number, number]> = {
-  LV: [20.9, 55.6, 28.3, 58.1],
-  SE: [10.9, 55.2, 24.2, 69.1],
-  IS: [-24.6, 63.2, -13.4, 66.6],
-  EE: [21.7, 57.5, 28.2, 59.7],
-  LT: [20.9, 53.9, 26.9, 56.5],
-  FI: [20.5, 59.7, 31.6, 70.1],
-  NO: [4.6, 57.9, 31.1, 71.2],
-};
-
-function regionBounds(codes: string[]): [[number, number], [number, number]] | null {
-  const boxes = codes.map((c) => REGION_BOUNDS[c.toUpperCase()]).filter(Boolean);
-  if (!boxes.length) return null;
-  return [
-    [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1]))],
-    [Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))],
-  ];
-}
+export { REGION_BOUNDS } from "./map-kit";
 
 const COLORS: Record<MapMarker["status"], string> = { active: "#5fae6e", attention: "#e3b448", critical: "#e0584f", offline: "#737c75" };
-
-function styleFor(kind: "satellite" | "dark") {
-  const token = publicEnv.mapboxToken;
-  const sat = token
-    ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=${token}`
-    : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-  const satAttr = token ? "© Mapbox © OpenStreetMap" : "Tiles © Esri — Esri, Maxar, Earthstar Geographics";
-  const base = typeof document !== "undefined" && document.documentElement.dataset.theme === "light" ? "light_all" : "dark_all";
-  return {
-    version: 8 as const,
-    sources: {
-      sat: { type: "raster" as const, tiles: [sat], tileSize: 256, attribution: satAttr, maxzoom: 19 },
-      dark: { type: "raster" as const, tiles: [`https://a.basemaps.cartocdn.com/${base}/{z}/{x}/{y}@2x.png`, `https://b.basemaps.cartocdn.com/${base}/{z}/{x}/{y}@2x.png`], tileSize: 256, attribution: "© OpenStreetMap © CARTO", maxzoom: 19 },
-      labels: { type: "raster" as const, tiles: ["https://a.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}@2x.png"], tileSize: 256, maxzoom: 19 },
-    },
-    layers: kind === "satellite"
-      ? [
-          { id: "sat", type: "raster" as const, source: "sat", paint: { "raster-saturation": -0.35, "raster-brightness-max": 0.72, "raster-contrast": 0.1 } },
-          { id: "labels", type: "raster" as const, source: "labels", paint: { "raster-opacity": 0.85 } },
-        ]
-      : [{ id: "dark", type: "raster" as const, source: "dark", paint: { "raster-saturation": -0.2, "raster-hue-rotate": 90, "raster-brightness-max": 0.9 } }],
-  };
-}
 
 function markerEl(m: MapMarker) {
   const el = document.createElement("button");
@@ -99,7 +60,10 @@ export function LiveMap({ markers, height = 420, className, controls = true, map
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MLMap | null>(null);
   const markerRefs = useRef<MLMarker[]>([]);
-  const [style, setStyle] = useState<"satellite" | "dark">("satellite");
+  const [style, setStyle] = useState<BaseKind>("satellite");
+  const [hoverRegion, setHoverRegion] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null);
+  const pinRef = useRef<import("maplibre-gl").Marker | null>(null);
   const [layers, setLayers] = useState({ machine: true, project: true, employee: true });
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -112,36 +76,68 @@ export function LiveMap({ markers, height = 420, className, controls = true, map
     let disposed = false;
     (async () => {
       try {
-        const maplibre = await import("maplibre-gl");
+        const maplibre = await loadMaplibre();
         if (disposed || !ref.current) return;
         const initial = regionBounds(regionsRef.current) ?? [[10.9, 55.2], [28.3, 66.6]];
         const map = new maplibre.Map({
-          container: ref.current, style: styleFor("satellite"), bounds: initial, fitBoundsOptions: { padding: 30 },
+          container: ref.current, style: baseStyle("satellite"), bounds: initial, fitBoundsOptions: { padding: 30 },
           attributionControl: { compact: true }, cooperativeGestures: false, dragRotate: false,
         });
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), "bottom-right");
         map.addControl(new maplibre.FullscreenControl(), "bottom-right");
+        map.addControl(new maplibre.ScaleControl({ unit: "metric" }), "bottom-left");
         mapRef.current = map;
         const markReady = () => { if (!disposed) setReady(true); };
+        // boundaries survive base-style switches (setStyle wipes custom layers)
+        map.on("style.load", () => addBoundaries(map, { municipalities: controls }));
         map.on("load", markReady);
         map.once("idle", markReady);
         // never leave the loading veil up (slow tile servers, blocked networks)
         window.setTimeout(markReady, 4500);
+        if (controls) {
+          trackRegionHover(map, (n) => { if (!disposed) setHoverRegion(n); });
+          map.on("mousemove", (e) => { if (!disposed) setCursor({ lng: e.lngLat.lng, lat: e.lngLat.lat }); });
+          map.on("mouseout", () => { if (!disposed) setCursor(null); });
+          // click on empty map → coordinates (WGS 84 + LKS-92/SWEREF) with copy & navigation
+          map.on("click", (e) => {
+            const hit = (e.originalEvent.target as HTMLElement | null)?.closest?.(".mjfg-marker");
+            if (hit) return;
+            new maplibre.Popup({ offset: 8, maxWidth: "320px", className: "mjfg-point" })
+              .setLngLat(e.lngLat).setHTML(pointPopupHtml({ lng: e.lngLat.lng, lat: e.lngLat.lat })).addTo(map);
+          });
+        }
         map.on("error", (e) => console.warn("[map]", e?.error?.message ?? e));
       } catch {
         setFailed(true);
       }
     })();
     return () => { disposed = true; mapRef.current?.remove(); mapRef.current = null; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const onPick = async (p: SearchPick) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const maplibre = await loadMaplibre();
+    pinRef.current?.remove();
+    const el = document.createElement("div");
+    el.className = "mjfg-pin";
+    el.innerHTML = `<span></span>`;
+    pinRef.current = new maplibre.Marker({ element: el, anchor: "bottom" }).setLngLat([p.lng, p.lat])
+      .setPopup(new maplibre.Popup({ offset: 28, maxWidth: "320px", className: "mjfg-point" }).setHTML(pointPopupHtml(p, p.label)))
+      .addTo(map);
+    if (p.bbox && p.bbox[2] - p.bbox[0] > 0.02) map.fitBounds([[p.bbox[0], p.bbox[1]], [p.bbox[2], p.bbox[3]]], { padding: 60, maxZoom: 14, duration: 1100 });
+    else map.flyTo({ center: [p.lng, p.lat], zoom: Math.max(map.getZoom(), 13), duration: 1100 });
+    pinRef.current.togglePopup();
+  };
+
   useEffect(() => {
-    if (ready && mapRef.current) mapRef.current.setStyle(styleFor(style));
+    if (ready && mapRef.current) mapRef.current.setStyle(baseStyle(style));
   }, [style, ready]);
 
   // day/night switch → matching basemap
   useEffect(() => {
-    const onTheme = () => { if (mapRef.current) mapRef.current.setStyle(styleFor(style)); };
+    const onTheme = () => { if (mapRef.current) mapRef.current.setStyle(baseStyle(style)); };
     window.addEventListener("mjfg:theme", onTheme);
     return () => window.removeEventListener("mjfg:theme", onTheme);
   }, [style]);
@@ -151,7 +147,7 @@ export function LiveMap({ markers, height = 420, className, controls = true, map
     if (!ready || !map) return;
     let cancelled = false;
     (async () => {
-      const maplibre = await import("maplibre-gl");
+      const maplibre = await loadMaplibre();
       if (cancelled) return;
       markerRefs.current.forEach((m) => m.remove());
       markerRefs.current = [];
@@ -187,22 +183,31 @@ export function LiveMap({ markers, height = 420, className, controls = true, map
       <div className={cn("skeleton pointer-events-none absolute inset-0 rounded-none transition-opacity duration-700", ready || failed ? "opacity-0" : "opacity-100")} aria-hidden />
       {failed && <div className="absolute inset-0 grid place-items-center text-sm text-muted">{t("errors.generic")}</div>}
       {maponState === "error" && (
-        <div className="absolute left-3 top-3 z-10 flex max-w-[80%] items-center gap-2 rounded-lg border border-warn/40 bg-bg/90 px-3 py-2 text-xs text-warn backdrop-blur">
+        <div className="absolute left-3 top-16 z-10 flex max-w-[80%] items-center gap-2 rounded-lg border border-warn/40 bg-bg/90 px-3 py-2 text-xs text-warn backdrop-blur">
           <TriangleAlert className="h-4 w-4 shrink-0" />
           <span>{t("map.maponUnavailable")}{maponLastSuccess ? ` ${t("common.lastUpdated")}: ${maponLastSuccess}` : ""}</span>
         </div>
       )}
       {controls && (
         <>
+          <div className="absolute left-3 top-3 z-20">
+            <MapSearch onPick={onPick} places={markers.map((m) => ({ id: `${m.kind}-${m.id}`, label: m.title, sub: m.subtitle, lng: m.lng, lat: m.lat }))} />
+          </div>
           <div className="absolute right-3 top-3 z-10 flex flex-col gap-1.5">
             <div className="flex overflow-hidden rounded-lg border border-line-strong bg-bg/90 backdrop-blur">
-              <button onClick={() => setStyle("satellite")} aria-pressed={style === "satellite"} title={t("map.satellite")}
-                className={cn("grid h-8 w-8 place-items-center", style === "satellite" ? "bg-forest-700 text-ink" : "text-muted hover:text-ink")}><Satellite className="h-4 w-4" /></button>
-              <button onClick={() => setStyle("dark")} aria-pressed={style === "dark"} title={t("map.terrain")}
-                className={cn("grid h-8 w-8 place-items-center", style === "dark" ? "bg-forest-700 text-ink" : "text-muted hover:text-ink")}><MapIcon className="h-4 w-4" /></button>
+              {([["satellite", Satellite, t("map.satellite")], ["map", MapIcon, t("map.terrain")], ["topo", Mountain, "OpenStreetMap"]] as const).map(([k, Icon, label]) => (
+                <button key={k} onClick={() => setStyle(k)} aria-pressed={style === k} title={label}
+                  className={cn("grid h-8 w-8 place-items-center transition", style === k ? "bg-forest-700 text-ink" : "text-muted hover:text-ink")}><Icon className="h-4 w-4" /></button>
+              ))}
             </div>
           </div>
-          <div className="absolute bottom-3 left-3 z-10 flex flex-wrap items-center gap-1.5">
+          {hoverRegion && (
+            <div className="pointer-events-none absolute left-1/2 top-3 z-10 hidden -translate-x-1/2 rounded-full border border-line-strong bg-bg/90 px-3 py-1 text-xs font-medium text-ink shadow-lg backdrop-blur md:block animate-fade-in">
+              {hoverRegion}
+            </div>
+          )}
+          {cursor && <PointInfo point={cursor} className="pointer-events-none absolute bottom-12 left-1/2 z-10 hidden -translate-x-1/2 lg:flex" />}
+          <div className="absolute bottom-9 left-3 z-10 flex flex-wrap items-center gap-1.5">
             <span className="flex items-center gap-1 rounded-lg border border-line-strong bg-bg/90 px-2 py-1 text-[11px] text-muted backdrop-blur"><Layers className="h-3.5 w-3.5" /></span>
             {(["machine", "project", "employee"] as const).map((k) => (
               <button key={k} onClick={() => setLayers((l) => ({ ...l, [k]: !l[k] }))} aria-pressed={layers[k]}
@@ -224,7 +229,7 @@ export function LiveMap({ markers, height = 420, className, controls = true, map
           <Maximize2 className="h-4 w-4" />
         </a>
       )}
-      <style>{`.mjfg-marker{background:none;border:0;padding:0;cursor:pointer}.mjfg-pulse{animation:pulse-ring 2s cubic-bezier(.2,.7,.2,1) infinite;opacity:.6}@media (prefers-reduced-motion: reduce){.mjfg-pulse{animation:none}}`}</style>
+      <style>{`.mjfg-marker{background:none;border:0;padding:0;cursor:pointer}.mjfg-pin span{display:block;width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--amber);border:3px solid #0b0f0d;box-shadow:0 8px 20px #000a;animation:fade-up .45s cubic-bezier(.2,.7,.2,1) both}.mjfg-pulse{animation:pulse-ring 2s cubic-bezier(.2,.7,.2,1) infinite;opacity:.6}@media (prefers-reduced-motion: reduce){.mjfg-pulse{animation:none}}`}</style>
     </div>
   );
 }

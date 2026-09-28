@@ -35,7 +35,21 @@ const TILE_HOSTS = [
   "https://tiles.openfreemap.org",
   "https://api.mapbox.com",
   "https://*.tiles.mapbox.com",
+  // base maps & forest layers (Meža karte)
+  "https://tile.openstreetmap.org",
+  "https://tiles.globalforestwatch.org",
+  "https://mapproxy.terrascope.be",
+  "https://image.discomap.eea.europa.eu",
+  "https://bio.discomap.eea.europa.eu",
+  "https://geoserver.lvmgeo.lv",
+  "https://geodpags.skogsstyrelsen.se",
+  "https://geodata.naturvardsverket.se",
+  "https://gis.lmi.is",
+  "https://gis.is",
+  "https://gis.ust.is",
 ];
+// address / place search (OpenStreetMap Nominatim)
+const GEOCODERS = ["https://nominatim.openstreetmap.org"];
 
 const csp = [
   ["default-src", "'self'"],
@@ -50,7 +64,7 @@ const csp = [
   ["img-src", "'self'", "blob:", "data:", ...supabaseHttp, ...TILE_HOSTS],
   ["font-src", "'self'", "data:"],
   ["media-src", "'self'", "blob:", ...supabaseHttp],
-  ["connect-src", "'self'", ...supabase, ...TILE_HOSTS, ...(isDev ? ["ws:", "http://localhost:*", "http://127.0.0.1:*"] : [])],
+  ["connect-src", "'self'", ...supabase, ...TILE_HOSTS, ...GEOCODERS, ...(isDev ? ["ws:", "http://localhost:*", "http://127.0.0.1:*"] : [])],
   ["worker-src", "'self'", "blob:"],
   ["child-src", "'self'", "blob:"],
   ...(isDev ? [] : [["upgrade-insecure-requests"]]),
@@ -80,6 +94,9 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // The service worker must always be revalidated so security fixes roll out immediately.
       { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
+      // versioned MapLibre worker + static boundary GeoJSON
+      { source: "/maplibre/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
+      { source: "/geo/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }] },
     ];
   },
 };

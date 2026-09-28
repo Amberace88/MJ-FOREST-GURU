@@ -73,6 +73,6 @@ function withHeaders(res: NextResponse) {
 export const config = {
   matcher: [
     // everything except static assets, images, PWA files
-    "/((?!_next/static|_next/image|favicon.ico|icons/|brand/|manifest.webmanifest|sw.js|robots.txt).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icons/|brand/|geo/|maplibre/|manifest.webmanifest|sw.js|robots.txt).*)",
   ],
 };

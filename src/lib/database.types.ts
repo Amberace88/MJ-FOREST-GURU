@@ -718,6 +718,134 @@ export type Database = {
           }
         ]
       }
+      forest_leads: {
+        Row: {
+          id: string
+          organization_id: string
+          company_id: string | null
+          country_id: string | null
+          project_id: string | null
+          title: string
+          status: string
+          source: string
+          work_type: string | null
+          latitude: number | null
+          longitude: number | null
+          area_ha: number | null
+          volume_m3: number | null
+          price_per_m3: number | null
+          estimated_value: number | null
+          currency: string
+          probability: number | null
+          cadastre_no: string | null
+          external_ref: string | null
+          owner_name: string | null
+          contact_phone: string | null
+          contact_email: string | null
+          next_action: string | null
+          next_action_at: string | null
+          notes: string | null
+          assigned_to: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          company_id?: string | null
+          country_id?: string | null
+          project_id?: string | null
+          title: string
+          status?: string
+          source?: string
+          work_type?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          area_ha?: number | null
+          volume_m3?: number | null
+          price_per_m3?: number | null
+          estimated_value?: number | null
+          currency?: string
+          probability?: number | null
+          cadastre_no?: string | null
+          external_ref?: string | null
+          owner_name?: string | null
+          contact_phone?: string | null
+          contact_email?: string | null
+          next_action?: string | null
+          next_action_at?: string | null
+          notes?: string | null
+          assigned_to?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          company_id?: string | null
+          country_id?: string | null
+          project_id?: string | null
+          title?: string
+          status?: string
+          source?: string
+          work_type?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          area_ha?: number | null
+          volume_m3?: number | null
+          price_per_m3?: number | null
+          estimated_value?: number | null
+          currency?: string
+          probability?: number | null
+          cadastre_no?: string | null
+          external_ref?: string | null
+          owner_name?: string | null
+          contact_phone?: string | null
+          contact_email?: string | null
+          next_action?: string | null
+          next_action_at?: string | null
+          notes?: string | null
+          assigned_to?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forest_leads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forest_leads_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forest_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forest_leads_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       fuel_logs: {
         Row: {
           id: string
