@@ -2,7 +2,7 @@
 
 import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useT } from "@/i18n/client";
 import type { ActionResult } from "@/lib/actions";
@@ -48,6 +48,10 @@ export function LoginForm({ next, expired, notConfigured }: { next?: string; exp
   const { t } = useT();
   const [state, action] = useActionState(loginAction, { ok: true } as ActionResult);
   const [show, setShow] = useState(false);
+  // Invite links from the Supabase dashboard land on the Site URL with the session in the fragment
+  useEffect(() => {
+    if (/access_token=|error_description=/.test(window.location.hash)) window.location.replace(`/auth/complete${window.location.hash}`);
+  }, []);
   return (
     <form action={action} className="space-y-4">
       <div className="mb-2">
