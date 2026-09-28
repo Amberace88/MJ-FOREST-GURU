@@ -310,7 +310,7 @@ async function OwnerDashboard({ ctx, stats, alerts }: { ctx: OrgContext; stats: 
           <CardHeader title={ctx.t("dashboard.safetyTitle")} icon={<ShieldCheck className="h-4 w-4" />} action={<ButtonLink href="/safety" size="sm" variant="ghost">{ctx.t("common.viewAll")}</ButtonLink>} />
           <CardBody className="space-y-2">
             <MiniStat icon={AlertTriangle} label={ctx.t("dashboard.kpi.incidentsOpen")} value={stats.incidents_open ?? 0} href="/incidents" tone={stats.incidents_open ? "crit" : "ok"} />
-            <MiniStat icon={ShieldCheck} label={ctx.t("alerts.types.training_expiring")} value={alerts.filter((a) => a.alert_type === "training_expiring").length} href="/training" tone={alerts.some((a) => a.alert_type === "training_expiring") ? "warn" : "ok"} />
+            <MiniStat icon={ShieldCheck} label={ctx.t("alerts.types.training_expiring")} value={alerts.filter((a) => a.alert_type === "training_expiring").length} href="/training?tab=records" tone={alerts.some((a) => a.alert_type === "training_expiring") ? "warn" : "ok"} />
             <div className="rounded-xl border border-line bg-surface-2/50 px-3.5 py-3">
               <div className="mb-2 flex items-center justify-between text-sm"><span className="text-ink-2">{ctx.t("safety.coverage")}</span>
                 <span className="font-display text-xl font-bold tabular">{ackPct === null ? "—" : `${ackPct}%`}</span></div>

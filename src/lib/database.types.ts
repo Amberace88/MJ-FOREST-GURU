@@ -3232,6 +3232,151 @@ export type Database = {
           }
         ]
       }
+      training_material_acks: {
+        Row: {
+          id: string
+          organization_id: string
+          material_id: string
+          version: number
+          employee_id: string
+          user_id: string
+          acknowledged_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          material_id: string
+          version: number
+          employee_id: string
+          user_id?: string
+          acknowledged_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          material_id?: string
+          version?: number
+          employee_id?: string
+          user_id?: string
+          acknowledged_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_material_acks_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_material_acks_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "training_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_material_acks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      training_materials: {
+        Row: {
+          id: string
+          organization_id: string
+          builtin_key: string | null
+          builtin_version: number | null
+          is_customized: boolean
+          category: string
+          country_id: string | null
+          title: string
+          subtitle: string | null
+          summary: string | null
+          audience: string[]
+          body: string
+          version: number
+          status: string
+          published_hash: string | null
+          published_at: string | null
+          requires_acknowledgement: boolean
+          reading_minutes: number | null
+          source_notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          builtin_key?: string | null
+          builtin_version?: number | null
+          is_customized?: boolean
+          category?: string
+          country_id?: string | null
+          title: string
+          subtitle?: string | null
+          summary?: string | null
+          audience?: string[]
+          body?: string
+          version?: number
+          status?: string
+          published_hash?: string | null
+          published_at?: string | null
+          requires_acknowledgement?: boolean
+          reading_minutes?: number | null
+          source_notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          builtin_key?: string | null
+          builtin_version?: number | null
+          is_customized?: boolean
+          category?: string
+          country_id?: string | null
+          title?: string
+          subtitle?: string | null
+          summary?: string | null
+          audience?: string[]
+          body?: string
+          version?: number
+          status?: string
+          published_hash?: string | null
+          published_at?: string | null
+          requires_acknowledgement?: boolean
+          reading_minutes?: number | null
+          source_notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_materials_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_materials_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -3811,6 +3956,17 @@ export type Database = {
             p_users?: Json
           }
         Returns: Json
+      }
+      training_audience: {
+        Args: {
+            p_org: string
+          }
+        Returns: {
+            employee_id: string
+            full_name: string
+            country_id: string
+            roles: string[]
+          }[]
       }
       work_hours_between: {
         Args: {

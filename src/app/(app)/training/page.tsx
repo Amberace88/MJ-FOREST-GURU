@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { FileText, GraduationCap, TriangleAlert, UserX } from "lucide-react";
+import { FileText, GraduationCap, Plus, RefreshCcw, TriangleAlert, UserX } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { expiryBucket } from "@/components/shared/lists";
 import { Badge, DemoBadge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { FilterBar, type FilterDef } from "@/components/ui/filter-bar";
+import { ActionButton } from "@/components/ui/form";
 import { EmptyState, PageHeader, Pagination, TabNav } from "@/components/ui/misc";
 import { DataTable } from "@/components/ui/table";
 import { requireOrg, type OrgContext } from "@/lib/context";
@@ -14,6 +16,8 @@ import { getOptions } from "@/lib/queries";
 import { likeTerm, searchParamsToString, sp as one } from "@/lib/utils";
 import { expiryRange, signedFileUrl } from "../documents/data";
 import { EditCourseDialog, EditTrainingDialog, NewCourseDialog, NewTrainingDialog, type CourseOption } from "./components";
+import { restoreBuiltinMaterials } from "./materials/actions";
+import { MaterialsTab } from "./materials-tab";
 
 export const metadata: Metadata = { title: "Apmācības" };
 const PAGE = 30;
@@ -34,7 +38,10 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     if (f) redirect(f.url);
   }
 
-  const tab = one(sp.tab) === "courses" ? "courses" : "records";
+  const tabParam = one(sp.tab);
+  // Old deep links (?new=1, ?expiry=, ?course= …) still open the records tab.
+  const recordsParams = ["new", "expiry", "course", "employee_filter", "q", "page"].some((k) => one(sp[k]));
+  const tab = tabParam === "courses" ? "courses" : tabParam === "records" || (!tabParam && recordsParams) ? "records" : "materials";
   const canRecord = ctx.canAny("manage_safety", "edit_employees");
   const canCourse = ctx.can("manage_safety");
   const [opts, coursesRes] = await Promise.all([
@@ -47,17 +54,25 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title={ctx.t("training.title")} subtitle={ctx.t("training.subtitle")}
-        actions={<>
+        actions={tab === "materials" ? (canCourse && <>
+          <ActionButton action={restoreBuiltinMaterials} variant="secondary" size="md" confirm={ctx.t("materials.restoreConfirm")}>
+            <RefreshCcw className="h-4 w-4" />{ctx.t("materials.restoreBuiltins")}
+          </ActionButton>
+          <ButtonLink href="/training/materials/new"><Plus className="h-4 w-4" />{ctx.t("materials.new")}</ButtonLink>
+        </>) : <>
           {canCourse && <NewCourseDialog countries={opts.countryOptions} />}
           {canRecord && <NewTrainingDialog orgId={ctx.org.id} employees={opts.employeeOptions} courses={courseOptions} defaultOpen={one(sp.new) === "1"} initialEmployee={one(sp.employee)} />}
         </>} />
       <TabNav active={tab} items={[
-        { key: "records", label: ctx.t("training.tabs.records"), href: "/training" },
+        { key: "materials", label: ctx.t("training.tabs.materials"), href: "/training" },
+        { key: "records", label: ctx.t("training.tabs.records"), href: "/training?tab=records" },
         { key: "courses", label: ctx.t("training.tabs.courses"), href: "/training?tab=courses", count: courses.length },
       ]} />
-      {tab === "records"
-        ? <RecordsTab ctx={ctx} sp={sp} courses={courses} courseOptions={courseOptions} canRecord={canRecord} />
-        : <CoursesTab ctx={ctx} courses={courses} canCourse={canCourse} />}
+      {tab === "materials"
+        ? <MaterialsTab ctx={ctx} sp={sp} />
+        : tab === "records"
+          ? <RecordsTab ctx={ctx} sp={sp} courses={courses} courseOptions={courseOptions} canRecord={canRecord} />
+          : <CoursesTab ctx={ctx} courses={courses} canCourse={canCourse} />}
     </>
   );
 }

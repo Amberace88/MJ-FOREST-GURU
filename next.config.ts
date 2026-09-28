@@ -71,6 +71,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Training-material PDFs embed TTF fonts read from disk at runtime (see src/lib/training/pdf/document.tsx).
+  outputFileTracingIncludes: {
+    "/api/training/[id]/pdf": ["./src/lib/training/pdf/fonts/*.ttf"],
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
