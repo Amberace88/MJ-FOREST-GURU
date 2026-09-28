@@ -42,7 +42,7 @@ export function ForestMap({ countries, leads, projects, height = "calc(100dvh - 
   const markersRef = useRef<MLMarker[]>([]);
   const [ready, setReady] = useState(false);
   const [base, setBase] = useState<BaseKind>("satellite");
-  const [panel, setPanel] = useState(true);
+  const [panel, setPanel] = useState(() => typeof window !== "undefined" && window.innerWidth >= 1500);
   const [country, setCountry] = useState<string>(countries.includes("LV") ? "LV" : (countries[0] ?? "LV"));
   const [active, setActive] = useState<Record<string, number>>({}); // layer id → opacity
   const activeRef = useRef(active);

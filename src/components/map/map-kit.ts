@@ -61,25 +61,32 @@ export function baseStyle(kind: BaseKind) {
     ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=${token}`
     : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
   const satAttr = token ? "© Mapbox © OpenStreetMap" : "Tiles © Esri — Esri, Maxar, Earthstar Geographics";
-  const carto = light ? "rastertiles/voyager" : "dark_all";
+  // Esri Canvas basemaps (no API key; CARTO now watermarks keyless tiles)
+  const esri = (svc: string) => `https://server.arcgisonline.com/ArcGIS/rest/services/${svc}/MapServer/tile/{z}/{y}/{x}`;
+  const canvas = light ? "Canvas/World_Light_Gray_Base" : "Canvas/World_Dark_Gray_Base";
+  const canvasRef = light ? "Canvas/World_Light_Gray_Reference" : "Canvas/World_Dark_Gray_Reference";
   return {
     version: 8 as const,
     glyphs: GLYPHS,
     sources: {
       sat: { type: "raster" as const, tiles: [sat], tileSize: 256, attribution: satAttr, maxzoom: 19 },
-      carto: { type: "raster" as const, tiles: ["a", "b", "c"].map((s) => `https://${s}.basemaps.cartocdn.com/${carto}/{z}/{x}/{y}@2x.png`), tileSize: 256, attribution: "© OpenStreetMap © CARTO", maxzoom: 19 },
-      labels: { type: "raster" as const, tiles: ["https://a.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}@2x.png"], tileSize: 256, maxzoom: 19 },
+      canvas: { type: "raster" as const, tiles: [esri(canvas)], tileSize: 256, attribution: "Esri, HERE, Garmin, © OpenStreetMap contributors", maxzoom: 16 },
+      canvasRef: { type: "raster" as const, tiles: [esri(canvasRef)], tileSize: 256, maxzoom: 16 },
+      labels: { type: "raster" as const, tiles: [esri("Reference/World_Boundaries_and_Places")], tileSize: 256, maxzoom: 19 },
       osm: { type: "raster" as const, tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "© OpenStreetMap contributors", maxzoom: 19 },
     },
     layers:
       kind === "satellite"
         ? [
             { id: "base", type: "raster" as const, source: "sat", paint: { "raster-saturation": -0.25, "raster-brightness-max": light ? 0.95 : 0.78, "raster-contrast": 0.08 } },
-            { id: "base-labels", type: "raster" as const, source: "labels", paint: { "raster-opacity": 0.85 } },
+            { id: "base-labels", type: "raster" as const, source: "labels", paint: { "raster-opacity": 0.8 } },
           ]
         : kind === "topo"
           ? [{ id: "base", type: "raster" as const, source: "osm", paint: light ? {} : { "raster-brightness-max": 0.72, "raster-saturation": -0.3 } }]
-          : [{ id: "base", type: "raster" as const, source: "carto", paint: light ? {} : { "raster-saturation": -0.2, "raster-hue-rotate": 90, "raster-brightness-max": 0.9 } }],
+          : [
+              { id: "base", type: "raster" as const, source: "canvas", paint: light ? {} : { "raster-saturation": 0.15, "raster-hue-rotate": 70, "raster-brightness-max": 0.95 } },
+              { id: "base-ref", type: "raster" as const, source: "canvasRef", paint: { "raster-opacity": 0.9 } },
+            ],
   };
 }
 
