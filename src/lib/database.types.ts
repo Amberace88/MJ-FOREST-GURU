@@ -1107,6 +1107,8 @@ export type Database = {
           accepted_at: string | null
           revoked_at: string | null
           created_at: string
+          token_hash: string | null
+          opened_at: string | null
         }
         Insert: {
           id?: string
@@ -1120,6 +1122,8 @@ export type Database = {
           accepted_at?: string | null
           revoked_at?: string | null
           created_at?: string
+          token_hash?: string | null
+          opened_at?: string | null
         }
         Update: {
           id?: string
@@ -1133,6 +1137,8 @@ export type Database = {
           accepted_at?: string | null
           revoked_at?: string | null
           created_at?: string
+          token_hash?: string | null
+          opened_at?: string | null
         }
         Relationships: [
           {

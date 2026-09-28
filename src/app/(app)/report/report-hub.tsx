@@ -242,7 +242,7 @@ export function ReportHub(p: Props) {
                 <label key={pr.value} className="relative">
                   <input type="radio" name="priority" value={pr.value} defaultChecked={pr.value === "medium"} className="peer sr-only" />
                   <span className={cn("flex h-12 cursor-pointer items-center justify-center rounded-xl border border-line text-sm peer-checked:border-transparent peer-focus-visible:ring-2 peer-focus-visible:ring-amber",
-                    pr.value === "critical" ? "peer-checked:bg-crit peer-checked:text-white" : pr.value === "high" ? "peer-checked:bg-amber peer-checked:text-[#1b1406]" : "peer-checked:bg-forest-600")}>{pr.label}</span>
+                    pr.value === "critical" ? "peer-checked:bg-crit peer-checked:text-white" : pr.value === "high" ? "peer-checked:bg-amber peer-checked:text-[#1b1406]" : "peer-checked:bg-forest-600 peer-checked:text-on-accent")}>{pr.label}</span>
                 </label>
               ))}
             </div>

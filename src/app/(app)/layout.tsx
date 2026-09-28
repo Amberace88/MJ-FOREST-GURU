@@ -10,6 +10,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const ctx = await getContext();
   if (!ctx.org) redirect("/no-access");
 
+  // Accounts created by an admin must set their own password before doing anything else
+  if (ctx.user.app_metadata?.must_change_password === true) redirect("/reset-password?welcome=1&required=1");
+
   // First-run wizard for owners until the company setup is completed
   const h = await headers();
   const path = h.get("x-pathname") ?? "";
@@ -23,7 +26,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq("user_id", ctx.user.id)
     .is("read_at", null);
 
-  const topRole = ctx.roles[0] ?? "employee";
+  const ORDER = ["owner", "admin", "manager", "foreman", "mechanic", "employee"];
+  const topRole = [...ctx.roles].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b))[0] ?? "employee";
+  const isDeveloper = ctx.user.app_metadata?.platform_role === "developer";
   const needsPassword = !(await cookies()).get("mjfg_pw_set") && (await signedInViaEmailLink(ctx.supabase));
   const orgWide = ctx.can("view_all_projects") || ctx.can("view_all_employees");
 
@@ -32,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       locale={ctx.locale}
       userId={ctx.user.id}
       userName={ctx.employee?.full_name ?? ctx.profile?.full_name ?? ctx.user.email ?? ""}
-      roleLabel={ctx.label("users.roleNames", topRole)}
+      roleLabel={isDeveloper ? ctx.t("users.superAdmin") : ctx.label("users.roleNames", topRole)}
       orgName={ctx.org.name}
       orgId={ctx.org.id}
       needsPassword={needsPassword}

@@ -14,7 +14,7 @@ import { requirePermission, type OrgContext } from "@/lib/context";
 import { hasServiceRole } from "@/lib/env.server";
 import { logServerError } from "@/lib/errors";
 import { addDays, fmtDate, fmtDateTime, fmtHours, fmtMoney, todayIn, zonedMidnightUtc } from "@/lib/format";
-import { INVITABLE_ROLES } from "@/lib/permissions";
+import { grantableRoles } from "@/lib/invite";
 import { getOptions } from "@/lib/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { statusTone } from "@/lib/utils";
@@ -196,9 +196,7 @@ async function AccountCard({ ctx, emp }: { ctx: OrgContext; emp: Emp }) {
       }
     }
   }
-  const roles = INVITABLE_ROLES
-    .filter((r) => r !== "admin" || ctx.roles.some((x) => x === "owner" || x === "admin"))
-    .map((r) => ({ value: r, label: ctx.label("users.roleNames", r) }));
+  const roles = grantableRoles(ctx).map((r) => ({ value: r, label: ctx.label("users.roleNames", r) }));
   const disabledReason = !hasServiceRole() ? ctx.t("users.serviceKeyMissing") : null;
   const tone = state === "hasAccount" ? "ok" : state === "invited" ? "warn" : "off";
 

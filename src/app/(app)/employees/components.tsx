@@ -1,5 +1,6 @@
 "use client";
 
+import { InviteLinkDialog } from "@/components/shared/invite-link-dialog";
 import { Banknote, Mail, Pencil, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
@@ -87,14 +88,13 @@ export function InviteDialog({ employeeId, email, roles, disabledReason }: { emp
     return <p className="rounded-xl border border-warn/30 bg-warn/10 px-3 py-2 text-xs text-warn">{disabledReason}</p>;
   }
   return (
-    <FormDialog size="sm" title={t("employees.invite")} description={t("employees.accountHint")} action={inviteEmployee.bind(null, employeeId) as FormAction}
-      submitLabel={<><Mail className="h-4 w-4" /> {t("common.send")}</>}
+    <InviteLinkDialog title={t("employees.invite")} description={t("employees.accountHint")} action={inviteEmployee.bind(null, employeeId) as FormAction}
       trigger={<Button size="sm" variant="amber"><Mail className="h-4 w-4" /> {t("employees.invite")}</Button>}>
       <div className="space-y-4">
         <Input name="email" type="email" label={t("employees.email")} defaultValue={email ?? ""} required maxLength={200} autoComplete="off" />
         <Select name="role_key" label={t("employees.inviteRole")} defaultValue="employee" options={roles} required />
       </div>
-    </FormDialog>
+    </InviteLinkDialog>
   );
 }
 

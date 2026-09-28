@@ -171,7 +171,7 @@ export function WorkPanel({ orgId, userId, tz, active, projects, machines, workT
             {workTypes.length > 0 && <Select label={t("work.workType")} value={workType} onChange={(e) => setWorkType(e.target.value)} options={workTypes} />}
           </div>
           <button type="button" onClick={start} disabled={busy !== null}
-            className="group relative mx-auto mt-8 grid h-44 w-44 place-items-center rounded-full bg-gradient-to-br from-forest-400 to-forest-700 text-ink shadow-[0_0_0_10px_rgba(94,160,110,0.12),0_20px_60px_-10px_rgba(94,160,110,0.55)] transition hover:scale-[1.03] active:scale-95 disabled:opacity-70">
+            className="group relative mx-auto mt-8 grid h-44 w-44 place-items-center rounded-full bg-gradient-to-br from-forest-500 to-forest-600 text-on-accent shadow-[0_0_0_10px_rgba(94,160,110,0.12),0_20px_60px_-10px_rgba(94,160,110,0.55)] transition hover:scale-[1.03] active:scale-95 disabled:opacity-70">
             <span className="absolute inset-0 animate-ping rounded-full bg-forest-400/20 [animation-duration:2.4s]" aria-hidden />
             <span className="relative flex flex-col items-center gap-1.5">
               {busy ? <Loader2 className="h-10 w-10 animate-spin" /> : <Play className="h-10 w-10 translate-x-0.5" />}

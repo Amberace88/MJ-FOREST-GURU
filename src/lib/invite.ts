@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 import { fail, type ActionResult } from "@/lib/actions";
 import type { OrgContext } from "@/lib/context";
@@ -10,7 +11,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { requestMeta } from "@/lib/request";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-/** Application-level invitation validity (the Supabase email link itself expires per Auth "Email OTP expiry"). */
+/** Invitation link validity. */
 export const INVITE_VALID_DAYS = 7;
 
 export type InviteInput = {
@@ -22,6 +23,20 @@ export type InviteInput = {
   employeeId?: string | null;
 };
 
+export type InviteResult = { userId: string; link: string | null; expiresAt: string | null; existing: boolean };
+
+export const hashInviteToken = (token: string) => createHash("sha256").update(token).digest("hex");
+
+function newToken() {
+  const token = randomBytes(32).toString("base64url");
+  return { token, hash: hashInviteToken(token) };
+}
+
+async function linkFor(token: string) {
+  const { origin } = await requestMeta();
+  return `${appBaseUrl(origin)}/invite/${token}`;
+}
+
 function splitName(fullName: string) {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { first: "", last: "" };
@@ -29,28 +44,25 @@ function splitName(fullName: string) {
   return { first: parts.slice(0, -1).join(" "), last: parts[parts.length - 1] };
 }
 
-export function inviteRedirectUrl(origin?: string | null) {
-  return `${appBaseUrl(origin)}/auth/confirm?next=/reset-password`;
+/** Roles the current user may hand out: owners (and the platform developer) may also create owners. */
+export function grantableRoles(ctx: OrgContext): RoleKey[] {
+  const isOwner = ctx.roles.includes("owner") || ctx.user.app_metadata?.platform_role === "developer";
+  const base = INVITABLE_ROLES.filter((r) => r !== "admin" || ctx.can("manage_permissions") || isOwner);
+  return isOwner ? (["owner", ...base] as RoleKey[]) : base;
 }
 
 /**
- * Invites a user into the current organization (spec §129–130).
+ * Creates the person's account + profile + membership right away and returns a
+ * one-time invitation link (valid 7 days) that the admin can copy or share.
+ * No e-mail is sent, so it works without custom SMTP. On first sign-in the
+ * person MUST set their own password (app_metadata.must_change_password).
  *
- * 1. Permission checks with the caller's own context (manage_users; admin role
- *    additionally needs manage_permissions — the service role bypasses the DB
- *    guard, so it is re-checked here).
- * 2. New e-mail  → Supabase `auth.admin.inviteUserByEmail` (Latvian template,
- *    link → /auth/confirm → /reset-password) and membership via the
- *    service-role-only RPC `add_organization_member`.
- *    Existing account → membership only (no new e-mail account).
- * 3. `invitations` row written with the caller's client (RLS + audit trail),
- *    valid for 7 days.
- * Public sign-up stays disabled: accounts only exist through this path.
+ * If the e-mail already has an account (e.g. member of the DEMO organization),
+ * only the membership is added and no link is needed.
  */
-export async function inviteUser({ ctx, email, fullName, role, employeeId }: InviteInput): Promise<ActionResult<{ userId: string }>> {
+export async function inviteUser({ ctx, email, fullName, role, employeeId }: InviteInput): Promise<ActionResult<InviteResult>> {
   if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
-  if (!INVITABLE_ROLES.includes(role)) return fail(ctx.t("errors.validation"));
-  if (role === "admin" && !ctx.can("manage_permissions")) return fail(ctx.t("users.privilegedRole"));
+  if (!grantableRoles(ctx).includes(role)) return fail(ctx.t("users.privilegedRole"));
   if (!hasServiceRole()) return fail(ctx.t("users.serviceKeyMissing"));
 
   const emailParsed = z.string().trim().toLowerCase().email().max(200).safeParse(email);
@@ -62,10 +74,8 @@ export async function inviteUser({ ctx, email, fullName, role, employeeId }: Inv
     });
   }
   const mail = emailParsed.data;
-  const limit = rateLimit(`invite:${ctx.user.id}`, 20, 60 * 60 * 1000);
-  if (!limit.ok) return fail(ctx.t("errors.rateLimited"));
+  if (!rateLimit(`invite:${ctx.user.id}`, 30, 60 * 60 * 1000).ok) return fail(ctx.t("errors.rateLimited"));
 
-  // Employee link must be a visible, unlinked employee of THIS organization.
   if (employeeId) {
     if (!z.string().uuid().safeParse(employeeId).success) return fail(ctx.t("errors.validation"));
     const { data: emp } = await ctx.supabase.from("employees").select("id, user_id")
@@ -74,31 +84,26 @@ export async function inviteUser({ ctx, email, fullName, role, employeeId }: Inv
     if (emp.user_id) return fail(ctx.t("users.employeeHasAccount"));
   }
 
-  const { data: openInvite } = await ctx.supabase.from("invitations").select("id, expires_at")
-    .eq("organization_id", ctx.org.id).ilike("email", mail.replace(/[\\%_]/g, (c) => `\\${c}`)).is("accepted_at", null).is("revoked_at", null).maybeSingle();
-  if (openInvite && new Date(openInvite.expires_at).getTime() > Date.now()) return fail(ctx.t("users.alreadyInvited"));
-
   const admin = createAdminClient();
   const { first, last } = splitName(name);
 
-  // Existing account? (profiles.email mirrors auth.users.email; Supabase stores e-mails lower-case)
   const { data: existing } = await admin.from("profiles").select("id").eq("email", mail).maybeSingle();
   let userId: string;
   let createdNow = false;
-
   if (existing) {
     userId = existing.id;
     const { data: member } = await admin.from("organization_members").select("status")
       .eq("organization_id", ctx.org.id).eq("user_id", userId).maybeSingle();
     if (member) return fail(ctx.t("users.alreadyMember"));
   } else {
-    const { origin } = await requestMeta();
-    const { data, error } = await admin.auth.admin.inviteUserByEmail(mail, {
-      redirectTo: inviteRedirectUrl(origin),
-      data: { full_name: name, organization: ctx.org.name },
+    const { data, error } = await admin.auth.admin.createUser({
+      email: mail,
+      email_confirm: true,
+      user_metadata: { full_name: name },
+      app_metadata: { must_change_password: true },
     });
     if (error || !data.user) {
-      logServerError("invite.send", { status: error?.status, code: error?.code, message: error?.message });
+      logServerError("invite.create_user", { status: error?.status, code: error?.code, message: error?.message });
       return fail(ctx.t("users.inviteFailed"));
     }
     userId = data.user.id;
@@ -111,59 +116,57 @@ export async function inviteUser({ ctx, email, fullName, role, employeeId }: Inv
   });
   if (rpcError) {
     logServerError("invite.add_member", { code: rpcError.code, message: rpcError.message });
-    if (createdNow) {
-      const { error: delErr } = await admin.auth.admin.deleteUser(userId);
-      if (delErr) logServerError("invite.rollback", { message: delErr.message });
-    }
+    if (createdNow) await admin.auth.admin.deleteUser(userId).catch(() => undefined);
     return fail(ctx.t("errors.generic"));
   }
 
-  // Close any stale (expired) open invitation for the same e-mail, then record this one.
-  if (openInvite) {
-    await ctx.supabase.from("invitations").update({ revoked_at: new Date().toISOString() }).eq("id", openInvite.id);
-  }
-  const { error: invErr } = await ctx.supabase.from("invitations").insert({
+  // close stale open invitations for this e-mail, then record the new one
+  await admin.from("invitations").update({ revoked_at: new Date().toISOString() })
+    .eq("organization_id", ctx.org.id).ilike("email", mail.replace(/[\\%_]/g, (c) => `\\${c}`))
+    .is("accepted_at", null).is("revoked_at", null);
+
+  const expiresAt = new Date(Date.now() + INVITE_VALID_DAYS * 86_400_000).toISOString();
+  const tok = createdNow ? newToken() : null;
+  const { error: invErr } = await admin.from("invitations").insert({
     organization_id: ctx.org.id, email: mail, employee_id: employeeId ?? null, role_key: role, invited_by: ctx.user.id,
-    user_id: userId, expires_at: new Date(Date.now() + INVITE_VALID_DAYS * 86_400_000).toISOString(),
+    user_id: userId, expires_at: expiresAt, token_hash: tok?.hash ?? null,
     accepted_at: createdNow ? null : new Date().toISOString(),
   });
-  if (invErr) logServerError("invite.record", { code: invErr.code, message: invErr.message });
+  if (invErr) {
+    logServerError("invite.record", { code: invErr.code, message: invErr.message });
+    return fail(ctx.t("errors.generic"));
+  }
 
   return {
     ok: true,
-    message: createdNow ? ctx.t("users.inviteSent", { email: mail }) : ctx.t("users.addedExisting"),
-    data: { userId },
+    message: createdNow ? ctx.t("users.linkReady") : ctx.t("users.addedExisting"),
+    data: { userId, link: tok ? await linkFor(tok.token) : null, expiresAt: tok ? expiresAt : null, existing: !createdNow },
   };
 }
 
 /**
- * Re-sends the invitation e-mail for a pending invitation and extends it by 7 days.
- * If Supabase refuses a second invite (account already confirmed), a password
- * recovery e-mail is sent instead — it lets the user set a password just the same.
+ * Generates a NEW link for a pending invitation (the old one stops working)
+ * and extends it by 7 days. The person must set a password on first sign-in.
  */
-export async function resendInvitation(ctx: OrgContext, invitationId: string): Promise<ActionResult> {
+export async function regenerateInvitation(ctx: OrgContext, invitationId: string): Promise<ActionResult<InviteResult>> {
   if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
   if (!hasServiceRole()) return fail(ctx.t("users.serviceKeyMissing"));
-  const limit = rateLimit(`invite:${ctx.user.id}`, 20, 60 * 60 * 1000);
-  if (!limit.ok) return fail(ctx.t("errors.rateLimited"));
-
-  const { data: inv } = await ctx.supabase.from("invitations").select("id, email, accepted_at, revoked_at")
-    .eq("id", invitationId).eq("organization_id", ctx.org.id).maybeSingle();
-  if (!inv || inv.accepted_at || inv.revoked_at) return fail(ctx.t("errors.notFound"));
-
   const admin = createAdminClient();
-  const { origin } = await requestMeta();
-  const redirectTo = inviteRedirectUrl(origin);
-  const { error } = await admin.auth.admin.inviteUserByEmail(inv.email, { redirectTo });
+  const { data: inv } = await admin.from("invitations").select("id, user_id, accepted_at, revoked_at")
+    .eq("id", invitationId).eq("organization_id", ctx.org.id).maybeSingle();
+  if (!inv || inv.accepted_at || inv.revoked_at || !inv.user_id) return fail(ctx.t("errors.notFound"));
+
+  const tok = newToken();
+  const expiresAt = new Date(Date.now() + INVITE_VALID_DAYS * 86_400_000).toISOString();
+  const { error } = await admin.from("invitations").update({ token_hash: tok.hash, expires_at: expiresAt, opened_at: null }).eq("id", inv.id);
   if (error) {
-    const { error: recErr } = await admin.auth.resetPasswordForEmail(inv.email, { redirectTo: `${appBaseUrl(origin)}/auth/confirm?next=/reset-password` });
-    if (recErr) {
-      logServerError("invite.resend", { message: recErr.message });
-      return fail(ctx.t("users.inviteFailed"));
-    }
+    logServerError("invite.regenerate", { code: error.code, message: error.message });
+    return fail(ctx.t("errors.generic"));
   }
-  const { error: updErr } = await ctx.supabase.from("invitations")
-    .update({ expires_at: new Date(Date.now() + INVITE_VALID_DAYS * 86_400_000).toISOString() }).eq("id", inv.id);
-  if (updErr) logServerError("invite.extend", { code: updErr.code, message: updErr.message });
-  return { ok: true, message: ctx.t("users.resent") };
+  const { data: u } = await admin.auth.admin.getUserById(inv.user_id);
+  await admin.auth.admin.updateUserById(inv.user_id, { app_metadata: { ...(u.user?.app_metadata ?? {}), must_change_password: true } });
+  return { ok: true, message: ctx.t("users.linkReady"), data: { userId: inv.user_id, link: await linkFor(tok.token), expiresAt, existing: false } };
 }
+
+/** Backwards-compatible name used by older call sites. */
+export const resendInvitation = regenerateInvitation;

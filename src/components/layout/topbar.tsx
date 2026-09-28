@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { getNotifications, logout, markNotificationsRead, setCountryFilter, setOrganization } from "@/app/(app)/shell-actions";
 import { Logo } from "@/components/brand/logo";
+import { ThemeToggle } from "./theme-toggle";
 import { Avatar, Kbd } from "@/components/ui/misc";
 import { useT } from "@/i18n/client";
 import { fmtRelative } from "@/lib/format";
@@ -39,6 +40,7 @@ export function Topbar({ userId, userName, roleLabel, countries, countryId, show
         <Search className="h-5 w-5" />
       </button>
       <SyncIndicator userId={userId} />
+      <ThemeToggle />
       <NotificationsBell unread={unread} />
       <UserMenu name={userName} roleLabel={roleLabel} orgs={orgs} orgId={orgId} />
     </header>

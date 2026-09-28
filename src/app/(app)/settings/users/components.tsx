@@ -1,9 +1,10 @@
 "use client";
 
-import { Check, Lock, Mail, RotateCw, ShieldOff, ShieldCheck, UserCog, UserPlus, X } from "lucide-react";
+import { Check, Lock, RotateCw, ShieldOff, ShieldCheck, UserCog, UserPlus, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ActionButton, FormDialog, FormGrid, Input, Select, type FormAction } from "@/components/ui/form";
+import { InviteLinkDialog } from "@/components/shared/invite-link-dialog";
 import { toast } from "@/components/ui/toast";
 import { useT } from "@/i18n/client";
 import { PERMISSION_GROUPS, type RoleKey } from "@/lib/permissions";
@@ -22,11 +23,10 @@ export function InviteDialog({ roles, employees, defaultOpen, disabled }: {
     return <Button disabled><UserPlus className="h-4 w-4" /> {t("users.invite")}</Button>;
   }
   return (
-    <FormDialog size="md" title={t("users.invite")} description={t("users.inviteHint")} action={inviteUserAction as FormAction}
-      submitLabel={<><Mail className="h-4 w-4" /> {t("common.send")}</>} defaultOpen={defaultOpen}
+    <InviteLinkDialog title={t("users.invite")} description={t("users.inviteHint")} action={inviteUserAction as FormAction} defaultOpen={defaultOpen}
       trigger={<Button><UserPlus className="h-4 w-4" /> {t("users.invite")}</Button>}>
       <InviteFields roles={roles} employees={employees} />
-    </FormDialog>
+    </InviteLinkDialog>
   );
 }
 
@@ -89,9 +89,9 @@ export function InvitationActions({ id }: { id: string }) {
   const { t } = useT();
   return (
     <span className="inline-flex items-center gap-1">
-      <ActionButton action={resendInvitationAction.bind(null, id) as FormAction} variant="ghost" size="sm">
-        <RotateCw className="h-4 w-4" /><span className="hidden lg:inline">{t("users.resend")}</span>
-      </ActionButton>
+      <InviteLinkDialog title={t("users.newLink")} description={t("users.linkHint")} action={resendInvitationAction.bind(null, id) as FormAction}
+        submitLabel={t("users.newLink")}
+        trigger={<Button variant="ghost" size="sm"><RotateCw className="h-4 w-4" /><span className="hidden lg:inline">{t("users.newLink")}</span></Button>} />
       <ActionButton action={revokeInvitation.bind(null, id) as FormAction} variant="ghost" size="sm" confirm={t("users.confirmRevoke")} className="text-crit hover:text-crit">
         <X className="h-4 w-4" /><span className="hidden lg:inline">{t("users.revoke")}</span>
       </ActionButton>

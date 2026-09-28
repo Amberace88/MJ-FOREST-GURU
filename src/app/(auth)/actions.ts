@@ -100,6 +100,18 @@ export async function setPasswordAction(_prev: ActionResult, fd: FormData): Prom
     logServerError("auth.update_password", error);
     return { ok: false, error: t("errors.generic") };
   }
+  // Clear the "must change password" flag (only the service role can edit app_metadata)
+  if (user.app_metadata?.must_change_password && hasServiceRole()) {
+    try {
+      const admin = createAdminClient();
+      await admin.auth.admin.updateUserById(user.id, { app_metadata: { ...user.app_metadata, must_change_password: false } });
+      await admin.from("invitations").update({ accepted_at: new Date().toISOString() })
+        .eq("user_id", user.id).is("accepted_at", null).is("revoked_at", null);
+      await supabase.auth.refreshSession(); // new JWT without the flag
+    } catch (e) {
+      logServerError("auth.clear_must_change", e);
+    }
+  }
   // UI hint: this browser has confirmed a password (hides the "set password" banner)
   (await cookies()).set("mjfg_pw_set", "1", { httpOnly: true, sameSite: "lax", secure: true, path: "/", maxAge: 60 * 60 * 24 * 400 });
   // Activate pending invitations for this account (expired ones stay blocked)

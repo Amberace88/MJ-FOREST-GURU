@@ -40,7 +40,7 @@ export function EmptyState({ icon, title, text, action, className }: {
 export function Avatar({ name, src, size = 36, className }: { name?: string | null; src?: string | null; size?: number; className?: string }) {
   return (
     <span
-      className={cn("relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-forest-600 to-forest-800 font-semibold text-ink ring-1 ring-line-strong", className)}
+      className={cn("relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-forest-500 to-forest-600 font-semibold text-on-accent ring-1 ring-line-strong", className)}
       style={{ width: size, height: size, fontSize: size * 0.36 }}
       aria-hidden={!name}
     >

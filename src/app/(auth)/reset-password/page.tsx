@@ -18,5 +18,5 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
       </div>
     );
   }
-  return <SetPasswordForm welcome={sp.welcome === "1"} />;
+  return <SetPasswordForm welcome={sp.welcome === "1"} required={sp.required === "1" || user.app_metadata?.must_change_password === true} email={user.email ?? null} />;
 }

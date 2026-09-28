@@ -13,7 +13,7 @@ function Submit({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending}
-      className="group mt-2 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-forest-600 font-display text-lg font-semibold uppercase tracking-[0.14em] text-ink shadow-[inset_0_1px_0_#ffffff22,0_12px_30px_-10px_#2b6139] transition hover:bg-forest-500 disabled:opacity-60">
+      className="group mt-2 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-forest-600 font-display text-lg font-semibold uppercase tracking-[0.14em] text-on-accent shadow-[inset_0_1px_0_#ffffff22,0_12px_30px_-10px_var(--forest-600)] transition hover:bg-forest-500 disabled:opacity-60">
       {pending ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
       {children}
       {!pending && <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />}
@@ -44,7 +44,7 @@ function Alert({ state }: { state: ActionResult }) {
   );
 }
 
-export function LoginForm({ next, expired, notConfigured }: { next?: string; expired?: boolean; notConfigured?: boolean }) {
+export function LoginForm({ next, expired, notConfigured, linkError }: { next?: string; expired?: boolean; notConfigured?: boolean; linkError?: string }) {
   const { t } = useT();
   const [state, action] = useActionState(loginAction, { ok: true } as ActionResult);
   const [show, setShow] = useState(false);
@@ -58,6 +58,11 @@ export function LoginForm({ next, expired, notConfigured }: { next?: string; exp
         <h1 className="font-display text-[28px] font-bold uppercase leading-none tracking-wide">MJ Forest Guru</h1>
         <p className="mt-1.5 text-sm text-muted">{t("brand.private")}</p>
       </div>
+      {linkError && (
+        <div role="alert" className="rounded-xl border border-crit/30 bg-crit/10 px-3.5 py-2.5 text-sm text-crit">
+          {linkError === "invite" ? t("auth.inviteInvalid") : linkError === "rate" ? t("auth.tooManyAttempts") : t("auth.linkInvalid")}
+        </div>
+      )}
       {expired && <div role="status" className="rounded-xl border border-warn/30 bg-warn/10 px-3.5 py-2.5 text-sm text-warn">{t("auth.sessionExpired")}</div>}
       {notConfigured && <div role="alert" className="rounded-xl border border-crit/30 bg-crit/10 px-3.5 py-2.5 text-sm text-crit">{t("errors.notConfigured")}</div>}
       <Alert state={state} />
@@ -99,7 +104,7 @@ export function ForgotForm() {
   );
 }
 
-export function SetPasswordForm({ welcome }: { welcome?: boolean }) {
+export function SetPasswordForm({ welcome, required, email }: { welcome?: boolean; required?: boolean; email?: string | null }) {
   const { t } = useT();
   const [state, action] = useActionState(setPasswordAction, { ok: true } as ActionResult);
   const err = !state.ok ? state.fieldErrors : undefined;
@@ -107,8 +112,10 @@ export function SetPasswordForm({ welcome }: { welcome?: boolean }) {
     <form action={action} className="space-y-4">
       <div>
         <h1 className="font-display text-2xl font-bold uppercase tracking-wide">{welcome ? t("auth.welcomeTitle") : t("auth.resetTitle")}</h1>
-        <p className="mt-1.5 text-sm text-muted">{welcome ? t("auth.welcomeText") : t("auth.passwordRules")}</p>
+        <p className="mt-1.5 text-sm text-muted">{required ? t("auth.mustChangeText") : welcome ? t("auth.welcomeText") : t("auth.passwordRules")}</p>
+        {email && <p className="mt-3 rounded-lg border border-line bg-surface-2/60 px-3 py-2 text-sm text-ink-2">{email}</p>}
       </div>
+      {email && <input type="email" name="username" autoComplete="username" value={email} readOnly hidden />}
       <Alert state={state} />
       <Field icon={<Lock className="h-4 w-4" />} label={t("auth.newPassword")}>
         <input name="password" type="password" autoComplete="new-password" minLength={10} required className={cn(inputCls, err?.password && "border-crit/60")} />

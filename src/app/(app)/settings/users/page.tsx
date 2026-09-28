@@ -9,7 +9,8 @@ import { DataTable } from "@/components/ui/table";
 import { requirePermission } from "@/lib/context";
 import { hasServiceRole } from "@/lib/env.server";
 import { fmtDateTime, fmtRelative } from "@/lib/format";
-import { INVITABLE_ROLES, ROLE_KEYS, type RoleKey } from "@/lib/permissions";
+import { grantableRoles } from "@/lib/invite";
+import { ROLE_KEYS, type RoleKey } from "@/lib/permissions";
 import { sp as one, statusTone } from "@/lib/utils";
 import { ChangeRoleDialog, InvitationActions, InviteDialog, MemberStatusButton, PermissionMatrix, type MatrixRole } from "./components";
 
@@ -94,7 +95,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
   }).sort((a, b) => rank(b.primaryRole) - rank(a.primaryRole) || a.name.localeCompare(b.name, "lv"));
 
   const assignableRoles: RoleKey[] = ROLE_KEYS.filter((r) => canPerms || (r !== "owner" && r !== "admin"));
-  const invitableRoles: RoleKey[] = INVITABLE_ROLES.filter((r) => canPerms || r !== "admin");
+  const invitableRoles: RoleKey[] = grantableRoles(ctx);
 
   const counts = {
     active: memberRows.filter((m) => m.status === "active").length,

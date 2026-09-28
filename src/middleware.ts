@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // /api/cron/* authenticates itself with a bearer secret (no user session).
-const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password", "/auth/", "/offline", "/api/cron/"];
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password", "/auth/", "/offline", "/api/cron/", "/invite/"];
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p));

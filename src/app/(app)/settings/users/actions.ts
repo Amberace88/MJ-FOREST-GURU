@@ -5,7 +5,7 @@ import { z } from "zod";
 import { dbFail, fail, parseForm, zf, type ActionResult } from "@/lib/actions";
 import { requireOrg } from "@/lib/context";
 import { inviteUser, resendInvitation } from "@/lib/invite";
-import { INVITABLE_ROLES, PERMISSIONS, ROLE_KEYS, type RoleKey } from "@/lib/permissions";
+import { PERMISSIONS, ROLE_KEYS, type RoleKey } from "@/lib/permissions";
 
 const PATH = "/settings/users";
 const PRIVILEGED: readonly string[] = ["owner", "admin"];
@@ -15,7 +15,7 @@ const uuid = z.string().uuid();
 const inviteSchema = z.object({
   email: zf.email(),
   full_name: zf.reqText(200),
-  role: z.enum(INVITABLE_ROLES as [RoleKey, ...RoleKey[]]),
+  role: z.enum(ROLE_KEYS as unknown as [RoleKey, ...RoleKey[]]),
   employee_id: zf.optUuid(),
 });
 
@@ -29,7 +29,6 @@ export async function inviteUserAction(_prev: ActionResult, fd: FormData): Promi
   if (res.ok) {
     revalidatePath(PATH);
     revalidatePath("/employees");
-    return { ok: true, message: res.message };
   }
   return res;
 }

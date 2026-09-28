@@ -530,7 +530,7 @@ async function EmployeeDashboard({ ctx }: { ctx: OrgContext }) {
   return (
     <div className="space-y-6">
       {a && (
-        <Link href="/work" className="flex items-center gap-4 rounded-2xl border border-forest-500/50 bg-[linear-gradient(135deg,#1f4a2d,#141a16)] px-5 py-4 animate-fade-up">
+        <Link href="/work" className="flex items-center gap-4 rounded-2xl border border-forest-500/50 bg-[linear-gradient(135deg,var(--forest-700),var(--surface))] px-5 py-4 animate-fade-up">
           <span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full rounded-full bg-ok animate-pulse-ring" /><span className="relative h-3 w-3 rounded-full bg-ok" /></span>
           <span className="flex-1">
             <span className="block font-display text-xl font-bold uppercase tracking-wider">{ctx.t("work.active")}</span>

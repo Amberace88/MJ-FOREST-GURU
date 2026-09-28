@@ -19,11 +19,12 @@ function styleFor(kind: "satellite" | "dark") {
     ? `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=${token}`
     : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
   const satAttr = token ? "© Mapbox © OpenStreetMap" : "Tiles © Esri — Esri, Maxar, Earthstar Geographics";
+  const base = typeof document !== "undefined" && document.documentElement.dataset.theme === "light" ? "light_all" : "dark_all";
   return {
     version: 8 as const,
     sources: {
       sat: { type: "raster" as const, tiles: [sat], tileSize: 256, attribution: satAttr, maxzoom: 19 },
-      dark: { type: "raster" as const, tiles: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png", "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"], tileSize: 256, attribution: "© OpenStreetMap © CARTO", maxzoom: 19 },
+      dark: { type: "raster" as const, tiles: [`https://a.basemaps.cartocdn.com/${base}/{z}/{x}/{y}@2x.png`, `https://b.basemaps.cartocdn.com/${base}/{z}/{x}/{y}@2x.png`], tileSize: 256, attribution: "© OpenStreetMap © CARTO", maxzoom: 19 },
       labels: { type: "raster" as const, tiles: ["https://a.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}@2x.png"], tileSize: 256, maxzoom: 19 },
     },
     layers: kind === "satellite"

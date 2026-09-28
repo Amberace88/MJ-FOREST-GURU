@@ -18,7 +18,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
       <h1 className="mt-5 font-display text-2xl font-bold uppercase tracking-wide">{offline ? lv.errors.offline : lv.errors.generic}</h1>
       {error.digest && <p className="mt-2 text-xs text-faint">ID: {error.digest}</p>}
       <div className="mt-6 flex justify-center gap-2">
-        <button type="button" onClick={reset} className="inline-flex h-10 items-center gap-2 rounded-xl bg-forest-600 px-4 text-sm hover:bg-forest-500"><RotateCcw className="h-4 w-4" /> {lv.errors.tryAgain}</button>
+        <button type="button" onClick={reset} className="inline-flex h-10 items-center gap-2 rounded-xl bg-forest-600 px-4 text-sm text-on-accent hover:bg-forest-500"><RotateCcw className="h-4 w-4" /> {lv.errors.tryAgain}</button>
         <Link href="/dashboard" className="inline-flex h-10 items-center rounded-xl border border-line px-4 text-sm hover:bg-surface-2">{lv.errors.backHome}</Link>
       </div>
     </div>

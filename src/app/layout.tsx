@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,16 +18,21 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0f0d",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0f1612" },
+    { media: "(prefers-color-scheme: light)", color: "#0f1612" },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  colorScheme: "dark",
+  colorScheme: "dark light",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Theme: dark by default (night), light when chosen — stored in a cookie so the first paint is correct.
+  const theme = (await cookies()).get("mjfg_theme")?.value === "light" ? "light" : "dark";
   return (
-    <html lang="lv" className="dark">
+    <html lang="lv" data-theme={theme} suppressHydrationWarning>
       <body className="antialiased">
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-lg focus:bg-amber focus:px-3 focus:py-2 focus:text-black">
           Pāriet uz saturu

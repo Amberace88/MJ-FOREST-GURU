@@ -10,7 +10,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { ActionButton, type FormAction } from "@/components/ui/form";
 import { requireOrg } from "@/lib/context";
 import { hasServiceRole, serverEnv } from "@/lib/env.server";
-import { INVITABLE_ROLES } from "@/lib/permissions";
+import { grantableRoles } from "@/lib/invite";
 import { getOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { NewEmployeeDialog } from "../employees/components";
@@ -119,7 +119,7 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
       sb.from("invitations").select("id, email, role_key, expires_at, accepted_at").eq("organization_id", org).order("created_at", { ascending: false }).limit(50),
       sb.from("employees").select("id, full_name, email").eq("organization_id", org).is("user_id", null).is("deleted_at", null).order("full_name").limit(500),
     ]);
-    summary = <InviteDialog roles={INVITABLE_ROLES} disabled={!hasServiceRole()} employees={(freeRes.data ?? []).map((e) => ({ id: e.id, full_name: e.full_name, email: e.email }))} />;
+    summary = <InviteDialog roles={grantableRoles(ctx)} disabled={!hasServiceRole()} employees={(freeRes.data ?? []).map((e) => ({ id: e.id, full_name: e.full_name, email: e.email }))} />;
     body = (invRes.data ?? []).length ? (
       <ul className="divide-y divide-line rounded-xl border border-line">
         {(invRes.data ?? []).map((i) => (

@@ -18,7 +18,7 @@ export function Sidebar({ groups, orgName, isDemo }: { groups: NavGroup[]; orgNa
   const pathname = usePathname();
   const { t } = useT();
   return (
-    <aside className="topo-bg fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col border-r border-line bg-[linear-gradient(180deg,#0f1512,#0b0f0d)] lg:flex">
+    <aside className="topo-bg fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col border-r border-line bg-[linear-gradient(180deg,var(--sidebar-top),var(--bg))] lg:flex">
       <div className="flex h-[68px] items-center border-b border-line px-4">
         <Link href="/dashboard" className="min-w-0" aria-label={t("brand.name")}>
           <Logo subtitle={orgName} />

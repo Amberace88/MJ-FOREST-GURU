@@ -6,7 +6,7 @@ import { lv } from "@/i18n/lv";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-dvh overflow-hidden">
+    <div data-theme="dark" className="relative min-h-dvh overflow-hidden bg-bg">
       <ForestBackdrop className="pointer-events-none absolute inset-0" />
       <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-6xl items-center gap-10 px-5 py-10 lg:grid-cols-[1.1fr_440px] lg:px-10">
         <section className="hidden lg:block animate-fade-up">

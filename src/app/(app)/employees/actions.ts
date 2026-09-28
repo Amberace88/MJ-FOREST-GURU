@@ -5,9 +5,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { dbFail, fail, parseForm, zf, type ActionResult } from "@/lib/actions";
 import { requireOrg } from "@/lib/context";
-import { INVITE_VALID_DAYS, inviteUser } from "@/lib/invite";
-import { fmtDate } from "@/lib/format";
-import { INVITABLE_ROLES, type RoleKey } from "@/lib/permissions";
+import { inviteUser } from "@/lib/invite";
+import { ROLE_KEYS, type RoleKey } from "@/lib/permissions";
 
 const STATUSES = ["active", "on_leave", "inactive", "offboarding"] as const;
 
@@ -138,7 +137,7 @@ export async function setEmployeePhoto(employeeId: string, fileId: string): Prom
 /* ------------------------------------------------------------------ invitations */
 const inviteSchema = z.object({
   email: zf.email(),
-  role_key: z.enum(INVITABLE_ROLES as [string, ...string[]]),
+  role_key: z.enum(ROLE_KEYS as unknown as [string, ...string[]]),
 });
 
 /**
@@ -166,6 +165,5 @@ export async function inviteEmployee(employeeId: string, _prev: ActionResult, fd
   }
   revalidatePath(`/employees/${employeeId}`);
   revalidatePath("/employees");
-  const expires = new Date(Date.now() + INVITE_VALID_DAYS * 86_400_000).toISOString();
-  return { ok: true, message: `${res.message ?? ctx.t("employees.inviteSent", { email })} · ${ctx.t("employees.inviteExpires", { date: fmtDate(expires, ctx.timezone) })}` };
+  return res;
 }

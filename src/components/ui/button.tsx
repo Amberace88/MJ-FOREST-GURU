@@ -6,7 +6,7 @@ const base =
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] font-medium transition-all duration-150 select-none disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98]";
 
 const variants = {
-  primary: "bg-forest-600 text-ink hover:bg-forest-500 shadow-[inset_0_1px_0_#ffffff1a,0_6px_18px_-8px_#2b6139]",
+  primary: "bg-forest-600 text-on-accent hover:bg-forest-500 shadow-[inset_0_1px_0_#ffffff1a,0_6px_18px_-8px_var(--forest-600)]",
   secondary: "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-surface-3",
   ghost: "text-ink-2 hover:text-ink hover:bg-surface-2",
   danger: "bg-crit/15 text-crit border border-crit/30 hover:bg-crit/25",
