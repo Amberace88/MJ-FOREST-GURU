@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createT, getDictionary } from "@/i18n";
@@ -81,6 +82,7 @@ export async function forgotPasswordAction(_prev: ActionResult, fd: FormData): P
     redirectTo: `${appBaseUrl(origin)}/auth/callback?next=/reset-password`,
   });
   if (error) logServerError("auth.reset", error);
+  if (error?.status === 429) return { ok: false, error: t("auth.tooManyAttempts") };
   // Same answer whether or not the account exists (no account enumeration)
   return { ok: true, message: t("auth.linkSent") };
 }
@@ -98,6 +100,8 @@ export async function setPasswordAction(_prev: ActionResult, fd: FormData): Prom
     logServerError("auth.update_password", error);
     return { ok: false, error: t("errors.generic") };
   }
+  // UI hint: this browser has confirmed a password (hides the "set password" banner)
+  (await cookies()).set("mjfg_pw_set", "1", { httpOnly: true, sameSite: "lax", secure: true, path: "/", maxAge: 60 * 60 * 24 * 400 });
   // Activate pending invitations for this account (expired ones stay blocked)
   if (hasServiceRole() && user.email) {
     try {

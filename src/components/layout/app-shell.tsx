@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toast";
-import { I18nProvider } from "@/i18n/client";
+import { I18nProvider, useT } from "@/i18n/client";
 import { isStaleDeployError, reloadOnceForNewDeploy } from "@/lib/stale-deploy";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { CommandMenu, useCommandMenu } from "./command-menu";
@@ -20,6 +20,8 @@ export type ShellProps = {
   orgName: string;
   orgId: string;
   orgs: { id: string; name: string; is_demo: boolean }[];
+  /** signed in via e-mail link (invite / recovery) — password not confirmed in this session */
+  needsPassword?: boolean;
   isDemo: boolean;
   nav: NavGroup[];
   perms: string[];
@@ -65,6 +67,11 @@ export function AppShell(props: ShellProps) {
           <Topbar userId={props.userId} userName={props.userName} roleLabel={props.roleLabel} countries={props.countries}
             countryId={props.countryId} showCountrySwitch={props.showCountrySwitch} unread={props.unread} onOpenSearch={() => setOpen(true)}
             orgs={props.orgs} orgId={props.orgId} />
+          {props.needsPassword && (
+            <div role="status" className="border-b border-amber/30 bg-amber/10 px-4 py-2.5 text-center text-sm text-amber lg:px-8">
+              <PasswordBanner />
+            </div>
+          )}
           <main id="main" className="mx-auto w-full max-w-[1600px] px-4 pb-28 pt-5 lg:px-8 lg:pb-12 lg:pt-7 animate-fade-in">{props.children}</main>
         </div>
         <MobileNav />
@@ -72,5 +79,15 @@ export function AppShell(props: ShellProps) {
         <Toaster />
       </div>
     </I18nProvider>
+  );
+}
+
+function PasswordBanner() {
+  const { t } = useT();
+  return (
+    <>
+      {t("auth.setPasswordBanner")}{" "}
+      <a href="/reset-password?welcome=1" className="font-semibold underline underline-offset-4 hover:text-ink">{t("auth.setPassword")} →</a>
+    </>
   );
 }

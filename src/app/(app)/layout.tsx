@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { visibleNav } from "@/components/layout/nav-config";
@@ -24,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .is("read_at", null);
 
   const topRole = ctx.roles[0] ?? "employee";
+  const needsPassword = !(await cookies()).get("mjfg_pw_set") && (await signedInViaEmailLink(ctx.supabase));
   const orgWide = ctx.can("view_all_projects") || ctx.can("view_all_employees");
 
   return (
@@ -34,6 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       roleLabel={ctx.label("users.roleNames", topRole)}
       orgName={ctx.org.name}
       orgId={ctx.org.id}
+      needsPassword={needsPassword}
       orgs={ctx.orgs.map((o) => ({ id: o.id, name: o.name, is_demo: o.is_demo }))}
       isDemo={ctx.org.is_demo}
       nav={visibleNav(ctx.permissions, ctx.kind)}
@@ -46,4 +48,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {children}
     </AppShell>
   );
+}
+
+/** True when the current session came from an invite / recovery / magic link (no password step). UI hint only. */
+async function signedInViaEmailLink(sb: import("@/lib/context").OrgContext["supabase"]) {
+  try {
+    const { data } = await sb.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return false;
+    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8")) as { amr?: { method: string }[] };
+    const methods = (payload.amr ?? []).map((a) => a.method);
+    return methods.length > 0 && !methods.includes("password");
+  } catch {
+    return false;
+  }
 }

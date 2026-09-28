@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Building2, Check, CloudOff, LogOut, RefreshCw, Search, CheckCheck, Loader2 } from "lucide-react";
+import { Bell, Building2, Check, CloudOff, KeyRound, LogOut, RefreshCw, Search, CheckCheck, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -178,6 +178,9 @@ function UserMenu({ name, roleLabel, orgs, orgId }: { name: string; roleLabel: s
               ))}
             </div>
           )}
+          <Link href="/reset-password" onClick={() => setOpen(false)} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-ink-2 hover:bg-surface-2 hover:text-ink">
+            <KeyRound className="h-4 w-4" /> {t("auth.changePassword")}
+          </Link>
           <form action={logout}>
             <button type="submit" className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-ink-2 hover:bg-surface-2 hover:text-ink">
               <LogOut className="h-4 w-4" /> {t("auth.logout")}

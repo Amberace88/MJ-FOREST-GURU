@@ -172,6 +172,8 @@ export const lv = {
     welcomeTitle: "Laipni lūgti MJ Forest Guru",
     welcomeText: "Iestatiet savu paroli, lai pabeigtu reģistrāciju.",
     setPassword: "Saglabāt paroli",
+    setPasswordBanner: "Jūs ienācāt ar e-pasta saiti. Iestatiet paroli, lai nākamreiz varētu ieiet ar e-pastu un paroli.",
+    changePassword: "Mainīt paroli",
     passwordUpdated: "Parole nomainīta.",
     backToLogin: "Atpakaļ uz pieteikšanos",
     invalidCredentials: "Nepareizs e-pasts vai parole.",
