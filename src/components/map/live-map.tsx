@@ -182,7 +182,8 @@ export function LiveMap({ markers, height = 420, className, controls = true, map
 
   return (
     <div className={cn("relative overflow-hidden rounded-[14px] border border-line bg-bg-2", className)} style={{ height }}>
-      <div ref={ref} className="absolute inset-0" role="region" aria-label={t("map.title")} />
+      {/* inline position: maplibre's unlayered CSS (.maplibregl-map { position: relative }) beats Tailwind's layered utilities */}
+      <div ref={ref} style={{ position: "absolute", inset: 0 }} role="region" aria-label={t("map.title")} />
       <div className={cn("skeleton pointer-events-none absolute inset-0 rounded-none transition-opacity duration-700", ready || failed ? "opacity-0" : "opacity-100")} aria-hidden />
       {failed && <div className="absolute inset-0 grid place-items-center text-sm text-muted">{t("errors.generic")}</div>}
       {maponState === "error" && (

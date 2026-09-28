@@ -12,6 +12,8 @@ export type MapMarker = {
   subtitle?: string;
   lines: [string, string][];
   lastUpdate?: string | null;
+  /** ISO timestamp of lastUpdate (for relative times) */
+  at?: string | null;
   stale?: boolean;
   href: string;
 };
@@ -78,7 +80,7 @@ export async function getMapData(ctx: OrgContext, opts: { countryId?: string | n
         [ctx.t("map.engineHours"), m.engine_hours != null ? `${fmtNumber(m.engine_hours)} h` : "—"],
         [ctx.t("map.gps"), pos.source === "mapon_gps" || pos.source === "mapon_can" ? "Mapon" : pos.source === "manual" ? "Manuāli" : String(pos.source)],
       ],
-      lastUpdate: fmtDateTime(pos.recorded_at as string, tz), stale, href: `/machines/${m.id}`,
+      lastUpdate: fmtDateTime(pos.recorded_at as string, tz), at: pos.recorded_at as string, stale, href: `/machines/${m.id}`,
     });
   }
 
@@ -98,7 +100,7 @@ export async function getMapData(ctx: OrgContext, opts: { countryId?: string | n
       markers.push({
         id: `emp-${l.id}`, kind: "employee", lat: l.start_lat, lng: l.start_lng, status: "active", title: e?.full_name ?? "—",
         subtitle: (l.project as { code: string } | null)?.code ?? undefined,
-        lines: [[ctx.t("work.started"), fmtDateTime(l.started_at, tz)]], lastUpdate: fmtDateTime(l.started_at, tz),
+        lines: [[ctx.t("work.started"), fmtDateTime(l.started_at, tz)]], lastUpdate: fmtDateTime(l.started_at, tz), at: l.started_at,
         href: `/employees/${l.employee_id}`,
       });
     }

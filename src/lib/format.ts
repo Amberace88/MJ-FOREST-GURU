@@ -91,7 +91,9 @@ export function fmtDuration(ms: number) {
 
 export function fmtRelative(value: string | Date | null | undefined) {
   if (!value) return "—";
-  const diff = (new Date(value).getTime() - Date.now()) / 1000;
+  const t = new Date(value).getTime();
+  if (Number.isNaN(t)) return typeof value === "string" ? value : "—";
+  const diff = (t - Date.now()) / 1000;
   const rtf = new Intl.RelativeTimeFormat(LOCALE, { numeric: "auto" });
   const abs = Math.abs(diff);
   if (abs < 60) return rtf.format(Math.round(diff), "second");

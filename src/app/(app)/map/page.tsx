@@ -66,7 +66,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
                             <span className="block truncate font-medium">{m.title}</span>
                             {m.subtitle && <span className="block truncate text-xs text-muted">{m.subtitle}</span>}
                           </span>
-                          {m.lastUpdate && <span className={`shrink-0 text-[11px] ${m.stale ? "text-warn" : "text-faint"}`}>{fmtRelative(m.lastUpdate)}</span>}
+                          {m.lastUpdate && <span className={`shrink-0 text-[11px] ${m.stale ? "text-warn" : "text-faint"}`}>{fmtRelative(m.at ?? null)}</span>}
                           {!m.lastUpdate && <MapPin className="h-3.5 w-3.5 shrink-0 text-faint" />}
                         </Link>
                       </li>
