@@ -86,8 +86,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Training-material PDFs embed TTF fonts read from disk at runtime (see src/lib/training/pdf/document.tsx).
+  // Don't evaluate every route module at boot: the PDF renderer (pdfkit) must only load on demand.
+  experimental: { preloadEntriesOnStart: false },
   outputFileTracingIncludes: {
-    "/api/training/[id]/pdf": ["./src/lib/training/pdf/fonts/*.ttf"],
+    // pdfkit loads its standard fonts with a dynamic require that file tracing can't see
+    "/api/training/[id]/pdf": ["./src/lib/training/pdf/fonts/*.ttf", "./node_modules/pdfkit/js/standard-fonts/**", "./node_modules/pdfkit/js/data/**"],
   },
   async headers() {
     return [

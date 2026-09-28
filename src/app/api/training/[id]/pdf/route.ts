@@ -3,7 +3,6 @@ import { requireOrg } from "@/lib/context";
 import { logServerError } from "@/lib/errors";
 import { rateLimit } from "@/lib/rate-limit";
 import { pdfFileName } from "@/lib/training/categories";
-import { renderMaterialPdf } from "@/lib/training/pdf/document";
 import type { MaterialCategory } from "@/lib/training/types";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +34,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!m) return text(ctx.t("errors.notFound"), 404);
 
   try {
-    const pdf = await renderMaterialPdf({
+    const pdf = await (await import("@/lib/training/pdf/document")).renderMaterialPdf({
       title: m.title, subtitle: m.subtitle, summary: m.summary, category: m.category as MaterialCategory, version: m.version,
       date: m.published_at ?? m.updated_at, country: ctx.countries.find((c) => c.id === m.country_id)?.name ?? null,
       audience: m.audience, readingMinutes: m.reading_minutes, requiresAck: m.requires_acknowledgement, body: m.body,
