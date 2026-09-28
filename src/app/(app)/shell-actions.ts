@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { COUNTRY_COOKIE, ORG_COOKIE, requireOrg } from "@/lib/context";
+import { COMPANY_COOKIE, COUNTRY_COOKIE, ORG_COOKIE, requireOrg } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
 
 const cookieOpts = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 365 };
@@ -14,12 +14,21 @@ export async function setCountryFilter(countryId: string | null) {
   else store.delete(COUNTRY_COOKIE);
 }
 
+/** Global company filter (null = all companies). Only active companies of the current organization are accepted. */
+export async function setCompanyFilter(companyId: string | null) {
+  const ctx = await requireOrg();
+  const store = await cookies();
+  if (typeof companyId === "string" && ctx.companies.some((c) => c.id === companyId)) store.set(COMPANY_COOKIE, companyId, cookieOpts);
+  else store.delete(COMPANY_COOKIE);
+}
+
 export async function setOrganization(orgId: string) {
   const ctx = await requireOrg();
   if (!ctx.orgs.some((o) => o.id === orgId)) return;
   const store = await cookies();
   store.set(ORG_COOKIE, orgId, cookieOpts);
   store.delete(COUNTRY_COOKIE);
+  store.delete(COMPANY_COOKIE);
 }
 
 export type SearchHit = { entity_type: string; entity_id: string; title: string; subtitle: string; link: string };

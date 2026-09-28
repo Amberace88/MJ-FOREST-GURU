@@ -13,6 +13,7 @@ import {
   AlertRulesForm, CompanyForm, CountryDialog, CountryToggle, LookupDialog, LookupToggle, WorkRulesForm,
   type CountryRow, type LookupRow,
 } from "./components";
+import { CompaniesPanel } from "./companies-panel";
 import { LOOKUP_KINDS, SETTINGS_TABS, type LookupKind, type SettingsTab } from "./constants";
 
 export const metadata: Metadata = { title: "Iestatījumi" };
@@ -23,7 +24,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: SP 
   const ctx = await requirePermission("manage_settings");
   const sp = await searchParams;
   const tabParam = one(sp.tab);
-  const tab: SettingsTab = (SETTINGS_TABS as readonly string[]).includes(tabParam ?? "") ? (tabParam as SettingsTab) : "general";
+  const tab: SettingsTab = (SETTINGS_TABS as readonly string[]).includes(tabParam ?? "") ? (tabParam as SettingsTab) : SETTINGS_TABS[0];
   const kindParam = one(sp.kind);
   const kind: LookupKind = (LOOKUP_KINDS as readonly string[]).includes(kindParam ?? "") ? (kindParam as LookupKind) : "work_type";
 
@@ -32,7 +33,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: SP 
   const tabs = SETTINGS_TABS.map((k) => ({ key: k, label: ctx.t(`settings.tabs.${k}`), href: `/settings?tab=${k}` }));
 
   let content: ReactNode = null;
-  if (tab === "general") {
+  if (tab === "companies") {
+    content = <CompaniesPanel ctx={ctx} />;
+  } else if (tab === "general") {
     const links: { href: string; icon: ReactNode; title: string; text: string; perms: Permission[] }[] = [
       { href: "/settings/users", icon: <Users className="h-4 w-4" />, title: ctx.t("nav.users"), text: ctx.t("settings.moreLinks.users"), perms: ["manage_users", "manage_permissions"] },
       { href: "/settings/integrations", icon: <Plug className="h-4 w-4" />, title: ctx.t("nav.integrations"), text: ctx.t("settings.moreLinks.integrations"), perms: ["manage_integrations"] },
@@ -43,7 +46,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: SP 
     content = (
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <Card className="animate-fade-up">
-          <CardHeader icon={<Building2 className="h-4 w-4" />} title={ctx.t("settings.sections.company")} subtitle={ctx.t("settings.companyHint")} />
+          <CardHeader icon={<Building2 className="h-4 w-4" />} title={ctx.t("settings.holding")} subtitle={ctx.t("settings.companyHint")} />
           <CardBody>
             <CompanyForm values={{
               name: ctx.org.name, legal_name: settings?.legal_name ?? null, registration_number: settings?.registration_number ?? null,

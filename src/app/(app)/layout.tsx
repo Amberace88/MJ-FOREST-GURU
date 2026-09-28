@@ -48,6 +48,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       countries={ctx.countries.map((c) => ({ id: c.id, code: c.code, name: c.name, flag: c.flag }))}
       countryId={ctx.countryId}
       showCountrySwitch={orgWide && ctx.countries.length > 1}
+      companies={ctx.companiesAll}
+      companyId={ctx.companyId}
+      showCompanySwitch={(orgWide || ctx.can("view_finance")) && ctx.companies.length >= 1}
       unread={count ?? 0}
     >
       {children}

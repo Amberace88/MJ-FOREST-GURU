@@ -2,6 +2,7 @@
 
 import { Check, CornerUpLeft, Pencil, Plus, Send, X } from "lucide-react";
 import { useState } from "react";
+import { CompanySelect } from "@/components/shared/company";
 import { Button } from "@/components/ui/button";
 import { ActionForm, FormDialog, FormGrid, Input, Select, SubmitButton, Textarea, type FormAction, type Option } from "@/components/ui/form";
 import { useT } from "@/i18n/client";
@@ -15,6 +16,7 @@ export type ExpenseValues = {
   id: string; expense_date: string; amount: number; currency: string; category: string; project_id: string | null;
   machine_id: string | null; employee_id: string | null; description: string | null;
   receipt: { id: string; url: string | null; label: string } | null;
+  company_id?: string | null;
 };
 
 type FieldsProps = {
@@ -47,6 +49,8 @@ function ExpenseFields({ orgId, options, defaultCurrency, today, employees, defa
           onChange={(e) => { const c = options.projectCurrency[e.target.value]; if (c && !touched) setCurrency(c); }} />
         <Select name="machine_id" label={t("common.machine")} defaultValue={values?.machine_id ?? ""} options={options.machines} placeholder="" optional />
       </FormGrid>
+      {/* empty = inherited from the selected project (DB trigger) */}
+      <CompanySelect value={values?.company_id ?? null} hint={t("companies.inheritHint")} />
       <Textarea name="description" label={t("common.description")} defaultValue={values?.description ?? ""} rows={3} maxLength={2000}
         hint={t("expenses.descriptionHint")} optional />
       <ReceiptPhotoField orgId={orgId} existing={values?.receipt ?? null} />

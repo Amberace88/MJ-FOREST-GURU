@@ -352,6 +352,50 @@ describe.skipIf(!DB)("RLS & authorization", () => {
     });
   });
 
+  // ------------------------------------------------------------------ companies
+  describe("companies", () => {
+    it("owner creates companies; members read them; employee and manager cannot write", async () => {
+      const r = await as(U.ownerA, async (q) => {
+        const id = (await q(`insert into companies (organization_id, name, color) values ($1, 'Land Guru', '#3a7a48') returning id`, [orgA]))[0].id;
+        return { id, n: (await q(`select count(*)::int n from companies where organization_id = $1`, [orgA]))[0].n };
+      });
+      expect(r.n).toBe(1);
+      for (const user of [U.employeeA, U.managerA]) {
+        const err = await expectFailure(user, `insert into companies (organization_id, name) values ($1, 'X SIA')`, [orgA]);
+        expect(err).toMatch(/row-level security/);
+      }
+      const bad = await expectFailure(U.ownerA, `insert into companies (organization_id, name, color) values ($1, 'Y', 'red')`, [orgA]);
+      expect(bad).toMatch(/23514|check constraint/);
+    });
+    it("another organization cannot read or reference them; delete is a no-op", async () => {
+      await db.query("begin");
+      try {
+        const a = (await db.query(`insert into companies (organization_id, name) values ($1, 'Skog Guru') returning id`, [orgA])).rows[0].id;
+        await db.query("set local role authenticated");
+        await db.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: U.ownerB, role: "authenticated" })]);
+        expect((await db.query(`select count(*)::int n from companies where id = $1`, [a])).rows[0].n).toBe(0);
+        await db.query("savepoint s");
+        await expect(db.query(`update projects set company_id = $1 where organization_id = $2`, [a, orgB])).rejects.toThrow(/CROSS_ORG_REFERENCE/);
+        await db.query("rollback to savepoint s");
+        await db.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: U.ownerA, role: "authenticated" })]);
+        const del = await db.query(`delete from companies where id = $1`, [a]);
+        expect(del.rowCount).toBe(0);
+      } finally {
+        await db.query("rollback");
+      }
+    });
+    it("expenses inherit the project's company", async () => {
+      const r = await as(U.ownerA, async (q) => {
+        const c = (await q(`insert into companies (organization_id, name) values ($1, 'Land Guru') returning id`, [orgA]))[0].id;
+        const p = (await q(`update projects set company_id = $1 where id = (select id from projects where organization_id = $2 order by code limit 1) returning id`, [c, orgA]))[0].id;
+        const e = await q(`insert into expenses (organization_id, expense_date, amount, currency, category, description, status, project_id)
+                           values ($1, current_date, 10, 'EUR', 'food', 'x', 'draft', $2) returning company_id`, [orgA, p]);
+        return { c, company: e[0].company_id };
+      });
+      expect(r.company).toBe(r.c);
+    });
+  });
+
   // ------------------------------------------------------------------ outsider
   describe("authenticated outsider (no membership)", () => {
     it("sees nothing", async () => {

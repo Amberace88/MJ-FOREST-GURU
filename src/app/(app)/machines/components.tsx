@@ -1,6 +1,7 @@
 "use client";
 
 import { ClipboardCheck, Pencil, Plus, RefreshCw, UserPlus } from "lucide-react";
+import { CompanySelect } from "@/components/shared/company";
 import { Button } from "@/components/ui/button";
 import { FormDialog, FormGrid, Input, Select, Textarea, type FormAction, type Option } from "@/components/ui/form";
 import { useT } from "@/i18n/client";
@@ -13,6 +14,7 @@ export type MachineValues = {
   engine_hours?: number | null; mileage_km?: number | null; service_interval_hours?: number | null; last_service_hours?: number | null;
   last_service_at?: string | null; next_service_hours?: number | null; next_service_at?: string | null;
   insurance_valid_until?: string | null; inspection_valid_until?: string | null; notes?: string | null;
+  company_id?: string | null;
 };
 
 const CURRENCIES: Option[] = ["EUR", "SEK", "ISK"].map((c) => ({ value: c, label: c }));
@@ -37,6 +39,7 @@ function MachineFields({ countries, fuelTypes, values }: { countries: Option[]; 
         <Input name="name" label={t("common.name")} defaultValue={values?.name} required maxLength={120} className="sm:col-span-2" placeholder="John Deere 1270G" />
         <Input name="internal_code" label={t("machines.internalCode")} defaultValue={values?.internal_code ?? ""} maxLength={40} optional placeholder="H-01" />
       </FormGrid>
+      <CompanySelect value={values ? (values.company_id ?? null) : undefined} />
       <FormGrid cols={3}>
         <Select name="category" label={t("common.category")} defaultValue={values?.category ?? "harvester"} required
           options={MACHINE_CATEGORIES.map((c) => ({ value: c, label: label("machines.categories", c) }))} />

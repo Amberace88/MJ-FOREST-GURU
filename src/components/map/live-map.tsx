@@ -11,6 +11,26 @@ import { cn } from "@/lib/utils";
 type MLMap = import("maplibre-gl").Map;
 type MLMarker = import("maplibre-gl").Marker;
 
+/** Operating regions (country code → [west, south, east, north]). */
+export const REGION_BOUNDS: Record<string, [number, number, number, number]> = {
+  LV: [20.9, 55.6, 28.3, 58.1],
+  SE: [10.9, 55.2, 24.2, 69.1],
+  IS: [-24.6, 63.2, -13.4, 66.6],
+  EE: [21.7, 57.5, 28.2, 59.7],
+  LT: [20.9, 53.9, 26.9, 56.5],
+  FI: [20.5, 59.7, 31.6, 70.1],
+  NO: [4.6, 57.9, 31.1, 71.2],
+};
+
+function regionBounds(codes: string[]): [[number, number], [number, number]] | null {
+  const boxes = codes.map((c) => REGION_BOUNDS[c.toUpperCase()]).filter(Boolean);
+  if (!boxes.length) return null;
+  return [
+    [Math.min(...boxes.map((b) => b[0])), Math.min(...boxes.map((b) => b[1]))],
+    [Math.max(...boxes.map((b) => b[2])), Math.max(...boxes.map((b) => b[3]))],
+  ];
+}
+
 const COLORS: Record<MapMarker["status"], string> = { active: "#5fae6e", attention: "#e3b448", critical: "#e0584f", offline: "#737c75" };
 
 function styleFor(kind: "satellite" | "dark") {
@@ -59,19 +79,21 @@ function markerEl(m: MapMarker) {
 
 function popupHtml(m: MapMarker, labels: { stale: string; open: string; lastUpdate: string }) {
   const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
-  const rows = m.lines.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:16px;font-size:12px;padding:2px 0"><span style="color:#8e978f">${esc(k)}</span><span style="color:#ece6da;text-align:right">${esc(v)}</span></div>`).join("");
+  const rows = m.lines.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:16px;font-size:12px;padding:2px 0"><span style="color:var(--muted)">${esc(k)}</span><span style="color:var(--text);text-align:right">${esc(v)}</span></div>`).join("");
   return `<div style="min-width:220px;font-family:inherit">
     <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:${COLORS[m.status]}"></span>
-      <strong style="font-size:14px;color:#ece6da">${esc(m.title)}</strong></div>
-    ${m.subtitle ? `<div style="font-size:11px;color:#8e978f;margin:2px 0 8px 16px">${esc(m.subtitle)}</div>` : '<div style="height:6px"></div>'}
+      <strong style="font-size:14px;color:var(--text)">${esc(m.title)}</strong></div>
+    ${m.subtitle ? `<div style="font-size:11px;color:var(--muted);margin:2px 0 8px 16px">${esc(m.subtitle)}</div>` : '<div style="height:6px"></div>'}
     ${rows}
-    ${m.lastUpdate ? `<div style="font-size:11px;color:${m.stale ? "#e3b448" : "#5f6961"};margin-top:6px">${esc(labels.lastUpdate)}: ${esc(m.lastUpdate)}${m.stale ? " · " + esc(labels.stale) : ""}</div>` : ""}
-    <a href="${esc(m.href)}" style="display:inline-block;margin-top:10px;font-size:12px;color:#e2a23b;text-decoration:none">${esc(labels.open)} →</a>
+    ${m.lastUpdate ? `<div style="font-size:11px;color:${m.stale ? "var(--warn)" : "var(--faint)"};margin-top:6px">${esc(labels.lastUpdate)}: ${esc(m.lastUpdate)}${m.stale ? " · " + esc(labels.stale) : ""}</div>` : ""}
+    <a href="${esc(m.href)}" style="display:inline-block;margin-top:10px;font-size:12px;color:var(--amber);text-decoration:none">${esc(labels.open)} →</a>
   </div>`;
 }
 
-export function LiveMap({ markers, height = 420, className, controls = true, maponState, maponLastSuccess }: {
+export function LiveMap({ markers, height = 420, className, controls = true, maponState, maponLastSuccess, regions = ["LV", "SE", "IS"] }: {
   markers: MapMarker[]; height?: number | string; className?: string; controls?: boolean; maponState?: string; maponLastSuccess?: string | null;
+  /** country codes to frame when there are no markers (e.g. the selected country tab) */
+  regions?: string[];
 }) {
   const { t } = useT();
   const ref = useRef<HTMLDivElement>(null);
@@ -82,6 +104,9 @@ export function LiveMap({ markers, height = 420, className, controls = true, map
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const visible = useMemo(() => markers.filter((m) => layers[m.kind]), [markers, layers]);
+  const regionsRef = useRef(regions);
+  regionsRef.current = regions;
+  const regionKey = regions.join(",");
 
   useEffect(() => {
     let disposed = false;
@@ -89,13 +114,20 @@ export function LiveMap({ markers, height = 420, className, controls = true, map
       try {
         const maplibre = await import("maplibre-gl");
         if (disposed || !ref.current) return;
+        const initial = regionBounds(regionsRef.current) ?? [[10.9, 55.2], [28.3, 66.6]];
         const map = new maplibre.Map({
-          container: ref.current, style: styleFor("satellite"), center: [20, 60], zoom: 3.4,
+          container: ref.current, style: styleFor("satellite"), bounds: initial, fitBoundsOptions: { padding: 30 },
           attributionControl: { compact: true }, cooperativeGestures: false, dragRotate: false,
         });
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), "bottom-right");
+        map.addControl(new maplibre.FullscreenControl(), "bottom-right");
         mapRef.current = map;
-        map.on("load", () => { if (!disposed) setReady(true); });
+        const markReady = () => { if (!disposed) setReady(true); };
+        map.on("load", markReady);
+        map.once("idle", markReady);
+        // never leave the loading veil up (slow tile servers, blocked networks)
+        window.setTimeout(markReady, 4500);
+        map.on("error", (e) => console.warn("[map]", e?.error?.message ?? e));
       } catch {
         setFailed(true);
       }
@@ -106,6 +138,13 @@ export function LiveMap({ markers, height = 420, className, controls = true, map
   useEffect(() => {
     if (ready && mapRef.current) mapRef.current.setStyle(styleFor(style));
   }, [style, ready]);
+
+  // day/night switch → matching basemap
+  useEffect(() => {
+    const onTheme = () => { if (mapRef.current) mapRef.current.setStyle(styleFor(style)); };
+    window.addEventListener("mjfg:theme", onTheme);
+    return () => window.removeEventListener("mjfg:theme", onTheme);
+  }, [style]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -124,16 +163,27 @@ export function LiveMap({ markers, height = 420, className, controls = true, map
         markerRefs.current.push(mk);
         bounds.extend([m.lng, m.lat]);
       }
-      if (visible.length === 1) map.flyTo({ center: [visible[0].lng, visible[0].lat], zoom: 11, duration: 800 });
-      else if (visible.length > 1) map.fitBounds(bounds, { padding: 60, maxZoom: 12, duration: 800 });
+      const inRegion = regionsRef.current.length === 1
+        ? visible.filter((m) => { const b = REGION_BOUNDS[regionsRef.current[0].toUpperCase()]; return !b || (m.lng >= b[0] && m.lng <= b[2] && m.lat >= b[1] && m.lat <= b[3]); })
+        : visible;
+      if (inRegion.length === 1) map.flyTo({ center: [inRegion[0].lng, inRegion[0].lat], zoom: 11, duration: 900 });
+      else if (inRegion.length > 1) {
+        const rb = new maplibre.LngLatBounds();
+        inRegion.forEach((m) => rb.extend([m.lng, m.lat]));
+        map.fitBounds(rb, { padding: 60, maxZoom: 12, duration: 900 });
+      } else {
+        const rb = regionBounds(regionsRef.current);
+        if (rb) map.fitBounds(rb, { padding: 30, duration: 900 });
+      }
+      void bounds;
     })();
     return () => { cancelled = true; };
-  }, [visible, ready, t]);
+  }, [visible, ready, t, regionKey]);
 
   return (
     <div className={cn("relative overflow-hidden rounded-[14px] border border-line bg-bg-2", className)} style={{ height }}>
       <div ref={ref} className="absolute inset-0" role="region" aria-label={t("map.title")} />
-      {!ready && !failed && <div className="skeleton absolute inset-0 rounded-none" />}
+      <div className={cn("skeleton pointer-events-none absolute inset-0 rounded-none transition-opacity duration-700", ready || failed ? "opacity-0" : "opacity-100")} aria-hidden />
       {failed && <div className="absolute inset-0 grid place-items-center text-sm text-muted">{t("errors.generic")}</div>}
       {maponState === "error" && (
         <div className="absolute left-3 top-3 z-10 flex max-w-[80%] items-center gap-2 rounded-lg border border-warn/40 bg-bg/90 px-3 py-2 text-xs text-warn backdrop-blur">

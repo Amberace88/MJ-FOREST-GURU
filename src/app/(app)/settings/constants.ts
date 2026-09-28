@@ -1,6 +1,6 @@
 /** Shared (client + server) constants for the settings module. */
 
-export const SETTINGS_TABS = ["general", "rules", "countries", "lookups", "alerts"] as const;
+export const SETTINGS_TABS = ["companies", "general", "rules", "countries", "lookups", "alerts"] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 export const LANGUAGES = ["lv", "sv", "en", "is"] as const;

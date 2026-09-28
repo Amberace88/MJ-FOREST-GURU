@@ -2,8 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
+import { CompaniesProvider } from "@/components/shared/company";
 import { Toaster } from "@/components/ui/toast";
 import { I18nProvider, useT } from "@/i18n/client";
+import type { CompanyLite } from "@/lib/companies";
 import { isStaleDeployError, reloadOnceForNewDeploy } from "@/lib/stale-deploy";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { CommandMenu, useCommandMenu } from "./command-menu";
@@ -28,6 +30,10 @@ export type ShellProps = {
   countries: { id: string; code: string; name: string; flag: string | null }[];
   countryId: string | null;
   showCountrySwitch: boolean;
+  /** legal companies (non-deleted, inactive included) + global company filter */
+  companies: CompanyLite[];
+  companyId: string | null;
+  showCompanySwitch: boolean;
   unread: number;
   children: ReactNode;
 };
@@ -61,23 +67,26 @@ export function AppShell(props: ShellProps) {
 
   return (
     <I18nProvider locale={props.locale}>
-      <div className="min-h-dvh">
-        <Sidebar groups={props.nav} orgName={props.orgName} isDemo={props.isDemo} />
-        <div className="lg:pl-[248px]">
-          <Topbar userId={props.userId} userName={props.userName} roleLabel={props.roleLabel} countries={props.countries}
-            countryId={props.countryId} showCountrySwitch={props.showCountrySwitch} unread={props.unread} onOpenSearch={() => setOpen(true)}
-            orgs={props.orgs} orgId={props.orgId} />
-          {props.needsPassword && (
-            <div role="status" className="border-b border-amber/30 bg-amber/10 px-4 py-2.5 text-center text-sm text-amber lg:px-8">
-              <PasswordBanner />
-            </div>
-          )}
-          <main id="main" className="mx-auto w-full max-w-[1600px] px-4 pb-28 pt-5 lg:px-8 lg:pb-12 lg:pt-7 animate-fade-in">{props.children}</main>
+      <CompaniesProvider companies={props.companies} companyId={props.companyId}>
+        <div className="min-h-dvh">
+          <Sidebar groups={props.nav} orgName={props.orgName} isDemo={props.isDemo} />
+          <div className="lg:pl-[248px]">
+            <Topbar userId={props.userId} userName={props.userName} roleLabel={props.roleLabel} countries={props.countries}
+              countryId={props.countryId} showCountrySwitch={props.showCountrySwitch} unread={props.unread} onOpenSearch={() => setOpen(true)}
+              orgs={props.orgs} orgId={props.orgId}
+              companies={props.showCompanySwitch ? props.companies.filter((c) => c.is_active) : []} companyId={props.companyId} />
+            {props.needsPassword && (
+              <div role="status" className="border-b border-amber/30 bg-amber/10 px-4 py-2.5 text-center text-sm text-amber lg:px-8">
+                <PasswordBanner />
+              </div>
+            )}
+            <main id="main" className="mx-auto w-full max-w-[1600px] px-4 pb-28 pt-5 lg:px-8 lg:pb-12 lg:pt-7 animate-fade-in">{props.children}</main>
+          </div>
+          <MobileNav />
+          <CommandMenu open={open} onClose={() => setOpen(false)} perms={props.perms} />
+          <Toaster />
         </div>
-        <MobileNav />
-        <CommandMenu open={open} onClose={() => setOpen(false)} perms={props.perms} />
-        <Toaster />
-      </div>
+      </CompaniesProvider>
     </I18nProvider>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ArrowLeft, ArrowRight, Check, Rocket } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Check, ChevronDown, Clock3, Landmark, Rocket } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { NewEmployeeDialog } from "../employees/components";
 import { NewMachineDialog } from "../machines/components";
 import { NewProjectDialog } from "../projects/components";
+import { CompaniesPanel } from "../settings/companies-panel";
 import { CompanyForm, CountryDialog, CountryToggle, WorkRulesForm, type CountryRow } from "../settings/components";
 import { MaponActions, MaponKeyForm } from "../settings/integrations/components";
 import { InviteDialog } from "../settings/users/components";
@@ -51,15 +52,38 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
 
   if (step === 0) {
     body = (
-      <div className="grid gap-6 lg:grid-cols-2">
-        <CompanyForm values={{
-          name: ctx.org.name, legal_name: ctx.settings?.legal_name ?? null, registration_number: ctx.settings?.registration_number ?? null,
-          default_language: ctx.settings?.default_language ?? "lv", default_timezone: ctx.settings?.default_timezone ?? "Europe/Riga", default_currency: ctx.settings?.default_currency ?? "EUR",
-        }} />
-        <WorkRulesForm values={{
-          overtime_after_hours: Number(ctx.settings?.overtime_after_hours ?? 8), max_shift_hours: Number(ctx.settings?.max_shift_hours ?? 12),
-          missing_checkout_after_hours: Number(ctx.settings?.missing_checkout_after_hours ?? 13), service_warning_hours: Number(ctx.settings?.service_warning_hours ?? 50),
-        }} />
+      <div className="space-y-8">
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <div>
+            <h2 className="flex items-center gap-2 font-display text-lg font-semibold uppercase tracking-wide">
+              <Landmark className="h-4 w-4 text-moss" /> {ctx.t("setup.holdingTitle")}
+            </h2>
+            <p className="mb-4 mt-1 text-sm text-muted">{ctx.t("setup.holdingHint")}</p>
+            <CompanyForm values={{
+              name: ctx.org.name, legal_name: ctx.settings?.legal_name ?? null, registration_number: ctx.settings?.registration_number ?? null,
+              default_language: ctx.settings?.default_language ?? "lv", default_timezone: ctx.settings?.default_timezone ?? "Europe/Riga", default_currency: ctx.settings?.default_currency ?? "EUR",
+            }} />
+          </div>
+          <div className="lg:border-l lg:border-line lg:pl-6">
+            <h2 className="flex items-center gap-2 font-display text-lg font-semibold uppercase tracking-wide">
+              <Building2 className="h-4 w-4 text-moss" /> {ctx.t("setup.companiesTitle")}
+            </h2>
+            <p className="mb-4 mt-1 rounded-xl border border-forest-600/30 bg-forest-700/15 px-3.5 py-2.5 text-sm text-ink-2">{ctx.t("setup.companiesHint")}</p>
+            <CompaniesPanel ctx={ctx} compact />
+          </div>
+        </section>
+        <details className="group rounded-xl border border-line bg-surface-2/30">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-ink-2 hover:text-ink [&::-webkit-details-marker]:hidden">
+            <Clock3 className="h-4 w-4 text-moss" /> {ctx.t("setup.workRulesMore")}
+            <ChevronDown className="ml-auto h-4 w-4 text-muted transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="border-t border-line p-4">
+            <WorkRulesForm values={{
+              overtime_after_hours: Number(ctx.settings?.overtime_after_hours ?? 8), max_shift_hours: Number(ctx.settings?.max_shift_hours ?? 12),
+              missing_checkout_after_hours: Number(ctx.settings?.missing_checkout_after_hours ?? 13), service_warning_hours: Number(ctx.settings?.service_warning_hours ?? 50),
+            }} />
+          </div>
+        </details>
       </div>
     );
   } else if (step === 1) {

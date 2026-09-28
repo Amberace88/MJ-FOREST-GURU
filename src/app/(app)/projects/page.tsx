@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { CalendarDays, MapPin, TreePine, Users } from "lucide-react";
 import Link from "next/link";
 import { Badge, DemoBadge } from "@/components/ui/badge";
+import { CompanyBadge } from "@/components/ui/company-badge";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { EmptyState, PageHeader, Pagination, Progress } from "@/components/ui/misc";
+import { companyFilterOptions, pickCompanyFilter } from "@/lib/companies";
 import { requireOrg } from "@/lib/context";
 import { fmtDate } from "@/lib/format";
 import { likeTerm, searchParamsToString, sp as one, statusTone } from "@/lib/utils";
@@ -19,9 +21,10 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const q = one(sp.q);
   const status = one(sp.status);
   const country = one(sp.country) ?? ctx.countryId ?? undefined;
+  const company = pickCompanyFilter(one(sp.company), ctx.companiesAll, ctx.companyId);
 
   let query = ctx.supabase.from("projects")
-    .select("id, code, name, client_name, status, country_id, start_date, expected_end_date, location_name, site_identifiers, is_demo, project_workers(count), project_machines(count)", { count: "exact" })
+    .select("id, code, name, client_name, status, country_id, start_date, expected_end_date, location_name, site_identifiers, is_demo, company_id, project_workers(count), project_machines(count)", { count: "exact" })
     .eq("organization_id", ctx.org.id).is("deleted_at", null).is("archived_at", null)
     .is("project_workers.unassigned_at", null).is("project_machines.unassigned_at", null)
     .order("status", { ascending: true }).order("code").range((page - 1) * PAGE, page * PAGE - 1);
@@ -29,6 +32,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   if (term) query = query.or(`code.ilike.${term},name.ilike.${term},client_name.ilike.${term}`);
   if (status) query = query.eq("status", status);
   if (country) query = query.eq("country_id", country);
+  if (company) query = query.eq("company_id", company);
   const { data, count } = await query;
   const rows = data ?? [];
   const canCreate = ctx.can("manage_projects") && ctx.can("view_all_projects");
@@ -41,6 +45,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
         { type: "search", name: "q" },
         { type: "select", name: "status", label: ctx.t("common.status"), options: ["active", "planned", "paused", "completed", "cancelled"].map((s) => ({ value: s, label: ctx.label("projects.status", s) })) },
         ...(ctx.countryId ? [] : [{ type: "select" as const, name: "country", label: ctx.t("common.country"), options: ctx.countries.map((c) => ({ value: c.id, label: `${c.flag ?? ""} ${c.name}` })) }]),
+        ...(ctx.companyId || ctx.companies.length < 2 ? [] : [{ type: "select" as const, name: "company", label: ctx.t("companies.company"), options: companyFilterOptions(ctx.companies) }]),
       ]} />
       {rows.length === 0 ? (
         <EmptyState icon={<TreePine className="h-6 w-6" />} title={ctx.t("projects.empty")} action={canCreate ? <NewProjectDialog countries={ctx.countries} /> : undefined} />
@@ -53,6 +58,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             const pct = start && end && end > start ? ((Date.now() - start) / (end - start)) * 100 : null;
             const daysLeft = end ? Math.ceil((end - Date.now()) / 86_400_000) : null;
             const ids = Object.entries((p.site_identifiers ?? {}) as Record<string, string>).slice(0, 2);
+            const co = p.company_id ? ctx.companiesAll.find((x) => x.id === p.company_id) : undefined;
             const workers = (p.project_workers as unknown as { count: number }[])?.[0]?.count ?? 0;
             const machines = (p.project_machines as unknown as { count: number }[])?.[0]?.count ?? 0;
             return (
@@ -69,6 +75,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                     </div>
                     <Badge tone={statusTone(p.status)} dot pulse={p.status === "active"}>{ctx.label("projects.status", p.status)}</Badge>
                   </div>
+                  {co && <CompanyBadge name={co.name} color={co.color} className="mt-2.5" />}
                   <div className="mt-4 space-y-1.5 text-xs text-muted">
                     {p.client_name && <div className="truncate">{ctx.t("projects.client")}: <span className="text-ink-2">{p.client_name}</span></div>}
                     {p.location_name && <div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{p.location_name}</div>}

@@ -25,6 +25,7 @@ const machineSchema = z.object({
   registration_number: zf.text(40).optional(),
   internal_code: zf.text(40).optional(),
   country_id: zf.optUuid(),
+  company_id: zf.optUuid(),
   fuel_type: zf.text(40).optional(),
   engine_hours: zf.optNum(0, 10_000_000),
   mileage_km: zf.optNum(0, 100_000_000),
@@ -67,6 +68,11 @@ function machineRow(d: MachineInput) {
   };
 }
 
+/** company_id only when the form rendered the company select (organization has companies). */
+function companyPatch(d: MachineInput, fd: FormData) {
+  return fd.has("company_id") ? { company_id: d.company_id ?? null } : {};
+}
+
 function machineError(scope: string, error: { code?: string; message?: string; details?: string | null }, t: (k: "machines.vinTaken") => string) {
   if (/uq_machines_vin/.test(`${error.message ?? ""} ${error.details ?? ""}`)) return fail(t("machines.vinTaken"), { vin: t("machines.vinTaken") });
   return dbFail(scope, error);
@@ -78,7 +84,7 @@ export async function createMachine(_prev: ActionResult, fd: FormData): Promise<
   const parsed = parseForm(machineSchema, fd);
   if (!parsed.ok) return parsed.result;
   const { data, error } = await ctx.supabase.from("machines")
-    .insert({ ...machineRow(parsed.data), organization_id: ctx.org.id, created_by: ctx.user.id })
+    .insert({ ...machineRow(parsed.data), ...companyPatch(parsed.data, fd), organization_id: ctx.org.id, created_by: ctx.user.id })
     .select("id").single();
   if (error) return machineError("machine.create", error, ctx.t);
   revalidatePath("/machines");
@@ -91,7 +97,7 @@ export async function updateMachine(id: string, _prev: ActionResult, fd: FormDat
   if (!ctx.can("manage_machines")) return fail(ctx.t("errors.permission"));
   const parsed = parseForm(machineSchema, fd);
   if (!parsed.ok) return parsed.result;
-  const { error } = await ctx.supabase.from("machines").update(machineRow(parsed.data)).eq("id", id).eq("organization_id", ctx.org.id);
+  const { error } = await ctx.supabase.from("machines").update({ ...machineRow(parsed.data), ...companyPatch(parsed.data, fd) }).eq("id", id).eq("organization_id", ctx.org.id);
   if (error) return machineError("machine.update", error, ctx.t);
   revalidatePath(`/machines/${id}`);
   revalidatePath("/machines");

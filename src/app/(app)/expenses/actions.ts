@@ -17,6 +17,7 @@ const expenseSchema = z.object({
   project_id: zf.optUuid(),
   machine_id: zf.optUuid(),
   employee_id: zf.optUuid(),
+  company_id: zf.optUuid(),
   description: zf.text(2000).optional(),
   receipt_id: zf.optUuid(),
   intent: z.enum(["draft", "submit"]).default("draft"),
@@ -70,6 +71,7 @@ export async function createExpense(_prev: ActionResult, fd: FormData): Promise<
     employee_id: employeeId,
     description: d.description ?? null,
     receipt_id: d.receipt_id ?? null,
+    company_id: d.company_id ?? null, // null → inherited from the project by the DB
     status: d.intent === "submit" ? "submitted" : "draft",
     created_by: ctx.user.id,
   }).select("id").single();
@@ -109,6 +111,7 @@ export async function updateExpense(id: string, _prev: ActionResult, fd: FormDat
     description: d.description ?? null,
     receipt_id: d.receipt_id ?? null,
     ...(ctx.can("view_finance") && d.employee_id ? { employee_id: d.employee_id } : {}),
+    ...(fd.has("company_id") ? { company_id: d.company_id ?? null } : {}),
     status: d.intent === "submit" ? "submitted" : current.status,
   }).eq("id", id).eq("organization_id", ctx.org.id);
   if (error) return dbFail("expense.update", error);

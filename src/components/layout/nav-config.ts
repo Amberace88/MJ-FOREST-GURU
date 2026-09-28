@@ -47,6 +47,7 @@ export const NAV: NavGroup[] = [
   ] },
   { key: "analytics", label: "nav.groups.analytics", items: [
     { key: "analytics", href: "/analytics", label: "nav.analytics", any: ["view_analytics"] },
+    { key: "calculators", href: "/calculators", label: "nav.calculators" },
   ] },
   { key: "system", label: "nav.groups.system", items: [
     { key: "settings", href: "/settings", label: "nav.settings", any: ["manage_settings"] },

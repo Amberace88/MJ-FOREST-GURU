@@ -2,6 +2,7 @@
 
 import { Pencil, Plus } from "lucide-react";
 import { useState } from "react";
+import { CompanySelect } from "@/components/shared/company";
 import { Button } from "@/components/ui/button";
 import { FormDialog, FormGrid, Input, Select, Textarea, type FormAction, type Option } from "@/components/ui/form";
 import { useT } from "@/i18n/client";
@@ -12,6 +13,7 @@ export type ProjectValues = {
   id?: string; code?: string; name?: string; country_id?: string; client_name?: string | null; status?: string; location_name?: string | null;
   address?: string | null; latitude?: number | null; longitude?: number | null; area_ha?: number | null; start_date?: string | null;
   expected_end_date?: string | null; actual_end_date?: string | null; notes?: string | null; site_identifiers?: Record<string, string>;
+  company_id?: string | null;
 };
 
 function ProjectFields({ countries, values }: { countries: Country[]; values?: ProjectValues }) {
@@ -27,10 +29,10 @@ function ProjectFields({ countries, values }: { countries: Country[]; values?: P
         <Input name="name" label={t("projects.name")} defaultValue={values?.name} required className="sm:col-span-2" maxLength={200} />
       </FormGrid>
       <FormGrid cols={3}>
+        <CompanySelect value={values ? (values.company_id ?? null) : undefined} />
         <Select name="country_id" label={t("common.country")} value={countryId} onChange={(e) => setCountryId(e.target.value)}
           options={countries.map((c) => ({ value: c.id, label: `${c.flag ?? ""} ${c.name}` }))} required />
         <Select name="status" label={t("common.status")} defaultValue={values?.status ?? "planned"} options={statuses} />
-        <Input name="client_name" label={t("projects.client")} defaultValue={values?.client_name ?? ""} optional />
       </FormGrid>
       {idFields.length > 0 && (
         <fieldset className="rounded-xl border border-line p-4">
@@ -47,7 +49,8 @@ function ProjectFields({ countries, values }: { countries: Country[]; values?: P
         <Input name="latitude" label={t("projects.latitude")} type="number" step="0.000001" min={-90} max={90} defaultValue={values?.latitude ?? ""} optional />
         <Input name="longitude" label={t("projects.longitude")} type="number" step="0.000001" min={-180} max={180} defaultValue={values?.longitude ?? ""} optional />
       </FormGrid>
-      <FormGrid cols={2}>
+      <FormGrid cols={3}>
+        <Input name="client_name" label={t("projects.client")} defaultValue={values?.client_name ?? ""} optional />
         <Input name="address" label={t("common.address")} defaultValue={values?.address ?? ""} optional />
         <Input name="area_ha" label={t("projects.area")} type="number" step="0.01" min={0} defaultValue={values?.area_ha ?? ""} optional />
       </FormGrid>

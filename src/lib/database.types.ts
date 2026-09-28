@@ -93,6 +93,78 @@ export type Database = {
           }
         ]
       }
+      companies: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          legal_name: string | null
+          registration_number: string | null
+          vat_number: string | null
+          country_id: string | null
+          address: string | null
+          email: string | null
+          phone: string | null
+          color: string
+          is_active: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          legal_name?: string | null
+          registration_number?: string | null
+          vat_number?: string | null
+          country_id?: string | null
+          address?: string | null
+          email?: string | null
+          phone?: string | null
+          color?: string
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          name?: string
+          legal_name?: string | null
+          registration_number?: string | null
+          vat_number?: string | null
+          country_id?: string | null
+          address?: string | null
+          email?: string | null
+          phone?: string | null
+          color?: string
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       countries: {
         Row: {
           id: string
@@ -362,6 +434,7 @@ export type Database = {
           created_by: string | null
           created_at: string
           updated_at: string
+          company_id: string | null
         }
         Insert: {
           id?: string
@@ -387,6 +460,7 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          company_id?: string | null
         }
         Update: {
           id?: string
@@ -412,8 +486,16 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          company_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employees_country_id_fkey"
             columns: ["country_id"]
@@ -464,6 +546,7 @@ export type Database = {
           created_by: string | null
           created_at: string
           updated_at: string
+          company_id: string | null
         }
         Insert: {
           id?: string
@@ -491,6 +574,7 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          company_id?: string | null
         }
         Update: {
           id?: string
@@ -518,8 +602,16 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          company_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_country_id_fkey"
             columns: ["country_id"]
@@ -1344,6 +1436,7 @@ export type Database = {
           created_by: string | null
           created_at: string
           updated_at: string
+          company_id: string | null
         }
         Insert: {
           id?: string
@@ -1380,6 +1473,7 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          company_id?: string | null
         }
         Update: {
           id?: string
@@ -1416,8 +1510,16 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          company_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "machines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "machines_country_id_fkey"
             columns: ["country_id"]
@@ -2221,6 +2323,14 @@ export type Database = {
           created_by: string | null
           created_at: string
           updated_at: string
+          company_id: string | null
+          contract_type: string | null
+          contract_price: number | null
+          contract_currency: string
+          contract_unit: string
+          expected_volume: number | null
+          budget_hours: number | null
+          budget_cost: number | null
         }
         Insert: {
           id?: string
@@ -2248,6 +2358,14 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          company_id?: string | null
+          contract_type?: string | null
+          contract_price?: number | null
+          contract_currency?: string
+          contract_unit?: string
+          expected_volume?: number | null
+          budget_hours?: number | null
+          budget_cost?: number | null
         }
         Update: {
           id?: string
@@ -2275,8 +2393,23 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          company_id?: string | null
+          contract_type?: string | null
+          contract_price?: number | null
+          contract_currency?: string
+          contract_unit?: string
+          expected_volume?: number | null
+          budget_hours?: number | null
+          budget_cost?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "projects_country_id_fkey"
             columns: ["country_id"]

@@ -30,7 +30,7 @@ export function OwnerQuickActions({ tr, perms }: { tr: Translator; perms: Set<st
     { href: "/fuel?new=1", label: tr.t("quick.addFuel"), Icon: Fuel },
   ];
   return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+    <div className="-mx-1 flex min-w-0 gap-2 overflow-x-auto px-1 pb-1 xl:max-w-[64%] xl:flex-wrap xl:justify-end xl:overflow-visible">
       {items.filter((i) => !i.need || perms.has(i.need)).map((i) => (
         <Link key={i.href} href={i.href}
           className="group flex shrink-0 items-center gap-2 rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-medium text-ink-2 transition hover:-translate-y-0.5 hover:border-forest-500/50 hover:bg-forest-800/40 hover:text-ink">

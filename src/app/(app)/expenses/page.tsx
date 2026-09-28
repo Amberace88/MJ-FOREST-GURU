@@ -5,6 +5,7 @@ import { ExpenseTable, type ExpenseRow } from "@/components/shared/lists";
 import { Card } from "@/components/ui/card";
 import { FilterBar, type FilterDef } from "@/components/ui/filter-bar";
 import { PageHeader, Pagination, TabNav } from "@/components/ui/misc";
+import { companyFilterOptions, pickCompanyFilter } from "@/lib/companies";
 import { requirePermission } from "@/lib/context";
 import { fmtMoney, todayIn } from "@/lib/format";
 import { getOptions } from "@/lib/queries";
@@ -30,6 +31,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const employee = seesOthers && UUID_RE.test(one(sp.employee) ?? "") ? one(sp.employee)! : null;
   const project = UUID_RE.test(one(sp.project) ?? "") ? one(sp.project)! : null;
   const country = UUID_RE.test(one(sp.country) ?? "") ? one(sp.country)! : ctx.countryId;
+  const company = pickCompanyFilter(one(sp.company), ctx.companiesAll, ctx.companyId);
   const from = DATE_RE.test(one(sp.from) ?? "") ? one(sp.from)! : null;
   const to = DATE_RE.test(one(sp.to) ?? "") ? one(sp.to)! : null;
   const term = likeTerm(one(sp.q));
@@ -46,6 +48,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   if (employee) rowsQ = rowsQ.eq("employee_id", employee);
   if (project) rowsQ = rowsQ.eq("project_id", project);
   if (country) rowsQ = rowsQ.eq("country_id", country);
+  if (company) rowsQ = rowsQ.eq("company_id", company);
   if (from) rowsQ = rowsQ.gte("expense_date", from);
   if (to) rowsQ = rowsQ.lte("expense_date", to);
   if (term) rowsQ = rowsQ.ilike("description", term);
@@ -59,6 +62,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   if (employee) kpiQ = kpiQ.eq("employee_id", employee);
   if (project) kpiQ = kpiQ.eq("project_id", project);
   if (country) kpiQ = kpiQ.eq("country_id", country);
+  if (company) kpiQ = kpiQ.eq("company_id", company);
   if (from) kpiQ = kpiQ.gte("expense_date", from);
   if (to) kpiQ = kpiQ.lte("expense_date", to);
   if (term) kpiQ = kpiQ.ilike("description", term);
@@ -67,6 +71,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   let pendingQ = ctx.supabase.from("expenses").select("id", { count: "exact", head: true })
     .eq("organization_id", ctx.org.id).is("deleted_at", null).eq("status", "submitted");
   if (country) pendingQ = pendingQ.eq("country_id", country);
+  if (company) pendingQ = pendingQ.eq("company_id", company);
 
   const canCreate = ctx.can("create_expense");
   const [rowsRes, kpiRes, pendingRes, opts, formOptions] = await Promise.all([
@@ -96,6 +101,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     ...(seesOthers ? [{ type: "select" as const, name: "employee", label: ctx.t("common.employee"), options: opts.employeeOptions }] : []),
     { type: "select", name: "project", label: ctx.t("common.project"), options: opts.allProjectOptions },
     ...(ctx.countryId ? [] : [{ type: "select" as const, name: "country", label: ctx.t("common.country"), options: opts.countryOptions }]),
+    ...(ctx.companyId || ctx.companies.length < 2 ? [] : [{ type: "select" as const, name: "company", label: ctx.t("companies.company"), options: companyFilterOptions(ctx.companies) }]),
     ...(seesOthers ? [{ type: "select" as const, name: "mine", label: ctx.t("expenses.owner"), options: [{ value: "1", label: ctx.t("expenses.mine") }] }] : []),
     { type: "date", name: "from", label: ctx.t("common.from") },
     { type: "date", name: "to", label: ctx.t("common.to") },

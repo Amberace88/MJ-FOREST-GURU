@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Clock, HardHat, TreePine, Users } from "lucide-react";
 import Link from "next/link";
 import { Badge, DemoBadge } from "@/components/ui/badge";
+import { CompanyBadge } from "@/components/ui/company-badge";
 import { FilterBar, type FilterDef } from "@/components/ui/filter-bar";
 import { Avatar, EmptyState, PageHeader, Pagination } from "@/components/ui/misc";
+import { companyFilterOptions, pickCompanyFilter } from "@/lib/companies";
 import { requirePermission } from "@/lib/context";
 import { fmtHours } from "@/lib/format";
 import { getOptions } from "@/lib/queries";
@@ -28,6 +30,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const team = teamParam === "none" || isUuid(teamParam) ? teamParam : undefined;
   const projectParam = one(sp.project);
   const project = isUuid(projectParam) ? projectParam : undefined;
+  const company = pickCompanyFilter(one(sp.company), ctx.companiesAll, ctx.companyId);
   const canEdit = ctx.can("edit_employees");
   const opts = await getOptions(ctx);
 
@@ -40,7 +43,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   }
 
   let query = ctx.supabase.from("employees")
-    .select("id, full_name, first_name, last_name, job_title, status, country_id, team_id, photo_path, user_id, is_demo, archived_at, team:teams!employees_team_fk(id, name)", { count: "exact" })
+    .select("id, full_name, first_name, last_name, job_title, status, country_id, team_id, photo_path, user_id, is_demo, archived_at, company_id, team:teams!employees_team_fk(id, name)", { count: "exact" })
     .eq("organization_id", ctx.org.id).is("deleted_at", null)
     .order("first_name").order("last_name").range((page - 1) * PAGE, page * PAGE - 1);
   if (status === "archived") query = query.not("archived_at", "is", null);
@@ -51,6 +54,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const term = likeTerm(q);
   if (term) query = query.or(`first_name.ilike.${term},last_name.ilike.${term},job_title.ilike.${term},email.ilike.${term},phone.ilike.${term}`);
   if (country) query = query.eq("country_id", country);
+  if (company) query = query.eq("company_id", company);
   if (team === "none") query = query.is("team_id", null);
   else if (team) query = query.eq("team_id", team);
   if (projectEmployeeIds) query = query.in("id", projectEmployeeIds.length ? projectEmployeeIds : ["00000000-0000-0000-0000-000000000000"]);
@@ -67,6 +71,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
       ...(canEdit ? [{ value: "archived", label: ctx.t("employees.archived") }] : []),
     ] },
     ...(ctx.countryId ? [] : [{ type: "select" as const, name: "country", label: ctx.t("common.country"), options: opts.countryOptions }]),
+    ...(ctx.companyId || ctx.companies.length < 2 ? [] : [{ type: "select" as const, name: "company", label: ctx.t("companies.company"), options: companyFilterOptions(ctx.companies) }]),
     { type: "select", name: "team", label: ctx.t("common.team"), options: [{ value: "none", label: ctx.t("employees.noTeam") }, ...opts.teamOptions] },
     { type: "select", name: "project", label: ctx.t("common.project"), options: opts.allProjectOptions },
   ];
@@ -86,6 +91,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
             const c = ctx.countries.find((x) => x.id === e.country_id);
             const info = live.get(e.id);
             const teamRel = e.team as { id: string; name: string } | null;
+            const co = e.company_id ? ctx.companiesAll.find((x) => x.id === e.company_id) : undefined;
             return (
               <li key={e.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}>
                 <Link href={`/employees/${e.id}`} className="card card-hover block h-full p-4">
@@ -104,6 +110,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                         {e.archived_at ? <Badge tone="off">{ctx.t("employees.archived")}</Badge>
                           : <Badge tone={statusTone(e.status)} dot>{ctx.label("employees.status", e.status)}</Badge>}
                         {c && <span className="text-xs text-muted" title={c.name}>{c.flag} {c.code}</span>}
+                        {co && <CompanyBadge name={co.name} color={co.color} className="max-w-[140px]" />}
                       </div>
                     </div>
                   </div>

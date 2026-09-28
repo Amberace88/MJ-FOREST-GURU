@@ -20,8 +20,8 @@ export function Sidebar({ groups, orgName, isDemo }: { groups: NavGroup[]; orgNa
   return (
     <aside className="topo-bg fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col border-r border-line bg-[linear-gradient(180deg,var(--sidebar-top),var(--bg))] lg:flex">
       <div className="flex h-[68px] items-center border-b border-line px-4">
-        <Link href="/dashboard" className="min-w-0" aria-label={t("brand.name")}>
-          <Logo subtitle={orgName} />
+        <Link href="/dashboard" className="min-w-0" aria-label={t("brand.name")} title={orgName}>
+          <Logo subtitle={t("brand.tagline")} />
         </Link>
       </div>
       {isDemo && (

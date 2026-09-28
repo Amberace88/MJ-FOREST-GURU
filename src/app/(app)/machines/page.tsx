@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Gauge, MapPin, Satellite, Tractor, User, Wrench } from "lucide-react";
 import Link from "next/link";
 import { Badge, DemoBadge } from "@/components/ui/badge";
+import { CompanyBadge } from "@/components/ui/company-badge";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { EmptyState, PageHeader, Pagination } from "@/components/ui/misc";
+import { companyFilterOptions, pickCompanyFilter } from "@/lib/companies";
 import { requireOrg } from "@/lib/context";
 import { fmtNumber, todayIn } from "@/lib/format";
 import { getOptions } from "@/lib/queries";
@@ -24,12 +26,13 @@ export default async function MachinesPage({ searchParams }: { searchParams: Pro
   const status = one(sp.status);
   const healthFilter = one(sp.health) as Health | undefined;
   const country = one(sp.country) ?? ctx.countryId ?? undefined;
+  const company = pickCompanyFilter(one(sp.company), ctx.companiesAll, ctx.companyId);
   const today = todayIn(ctx.timezone);
   const canGps = ctx.can("view_gps");
   const canManage = ctx.can("manage_machines");
 
   let query = ctx.supabase.from("machines")
-    .select("id, name, category, status, internal_code, registration_number, manufacturer, model, year, engine_hours, last_service_hours, service_interval_hours, next_service_hours, next_service_at, country_id, is_demo, operator:employees!machines_current_operator_id_fkey(id, full_name), project:projects!machines_current_project_id_fkey(id, code, name)")
+    .select("id, name, category, status, internal_code, registration_number, manufacturer, model, year, engine_hours, last_service_hours, service_interval_hours, next_service_hours, next_service_at, country_id, company_id, is_demo, operator:employees!machines_current_operator_id_fkey(id, full_name), project:projects!machines_current_project_id_fkey(id, code, name)")
     .eq("organization_id", ctx.org.id).is("deleted_at", null).is("archived_at", null)
     .order("name").limit(1000);
   const term = likeTerm(q);
@@ -37,6 +40,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Pro
   if (category && (MACHINE_CATEGORIES as readonly string[]).includes(category)) query = query.eq("category", category);
   if (status && (MACHINE_STATUSES as readonly string[]).includes(status)) query = query.eq("status", status);
   if (country) query = query.eq("country_id", country);
+  if (company) query = query.eq("company_id", company);
 
   const [machinesRes, repairsRes, gpsRes, maponRes, opts] = await Promise.all([
     query,
@@ -90,6 +94,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Pro
         { type: "select", name: "category", label: ctx.t("common.category"), options: MACHINE_CATEGORIES.map((c) => ({ value: c, label: ctx.label("machines.categories", c) })) },
         { type: "select", name: "status", label: ctx.t("common.status"), options: MACHINE_STATUSES.map((s) => ({ value: s, label: ctx.label("machines.status", s) })) },
         ...(ctx.countryId || ctx.countries.length < 2 ? [] : [{ type: "select" as const, name: "country", label: ctx.t("common.country"), options: countryOptions }]),
+        ...(ctx.companyId || ctx.companies.length < 2 ? [] : [{ type: "select" as const, name: "company", label: ctx.t("companies.company"), options: companyFilterOptions(ctx.companies) }]),
       ]} />
 
       {rows.length === 0 ? (
@@ -101,6 +106,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Pro
             const c = ctx.countries.find((x) => x.id === m.country_id);
             const rep = openRepairs.get(m.id);
             const gps = gpsLinked.get(m.id);
+            const co = m.company_id ? ctx.companiesAll.find((x) => x.id === m.company_id) : undefined;
             const sub = [[m.manufacturer, m.model].filter(Boolean).join(" "), m.year, m.registration_number].filter(Boolean).join(" · ");
             return (
               <li key={m.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(i, 10) * 35}ms` }}>
@@ -121,6 +127,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Pro
                     <Badge tone={statusTone(m.status)} dot pulse={m.status === "active" || m.status === "broken"}>{ctx.label("machines.status", m.status)}</Badge>
                   </div>
 
+                  {co && <CompanyBadge name={co.name} color={co.color} className="mt-2.5 self-start" />}
                   <div className="mt-4 flex items-end justify-between gap-3">
                     <div>
                       <div className="text-[11px] uppercase tracking-wider text-muted">{ctx.t("machines.engineHours")}</div>

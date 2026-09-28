@@ -1,12 +1,13 @@
 "use client";
 
-import { Bell, Building2, Check, CloudOff, KeyRound, LogOut, RefreshCw, Search, CheckCheck, Loader2 } from "lucide-react";
+import { Bell, Building2, Check, ChevronDown, CloudOff, KeyRound, Layers, LogOut, RefreshCw, Search, CheckCheck, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { getNotifications, logout, markNotificationsRead, setCountryFilter, setOrganization } from "@/app/(app)/shell-actions";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { getNotifications, logout, markNotificationsRead, setCompanyFilter, setCountryFilter, setOrganization } from "@/app/(app)/shell-actions";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "./theme-toggle";
+import { CompanyDot } from "@/components/ui/company-badge";
 import { Avatar, Kbd } from "@/components/ui/misc";
 import { useT } from "@/i18n/client";
 import { fmtRelative } from "@/lib/format";
@@ -17,19 +18,24 @@ type Country = { id: string; code: string; name: string; flag: string | null };
 type Notif = { id: string; title: string; body: string | null; link: string | null; read_at: string | null; created_at: string; type: string };
 
 export type OrgOption = { id: string; name: string; is_demo: boolean };
+type CompanyOption = { id: string; name: string; color: string };
 
-export function Topbar({ userId, userName, roleLabel, countries, countryId, showCountrySwitch, unread, onOpenSearch, orgs = [], orgId }: {
+export function Topbar({ userId, userName, roleLabel, countries, countryId, showCountrySwitch, unread, onOpenSearch, orgs = [], orgId, companies = [], companyId = null }: {
   userId: string; userName: string; roleLabel: string; countries: Country[]; countryId: string | null;
   showCountrySwitch: boolean; unread: number; onOpenSearch: () => void; orgs?: OrgOption[]; orgId?: string;
+  /** active companies for the global filter (empty = switch hidden) */
+  companies?: CompanyOption[]; companyId?: string | null;
 }) {
   const { t } = useT();
   return (
     <header className="sticky top-0 z-30 flex h-[60px] items-center gap-3 border-b border-line bg-bg/85 px-4 backdrop-blur-xl lg:h-[68px] lg:px-6">
       <Link href="/dashboard" className="lg:hidden" aria-label={t("brand.name")}><Logo compact /></Link>
-      <div className="hidden min-w-0 flex-1 lg:block">
+      <div className="hidden min-w-0 flex-1 items-center gap-2.5 lg:flex">
+        {companies.length > 0 && <CompanySwitch companies={companies} companyId={companyId} />}
         {showCountrySwitch && <CountrySwitch countries={countries} countryId={countryId} />}
       </div>
-      <div className="flex-1 lg:hidden">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 lg:hidden">
+        {companies.length > 0 && <CompanySwitch companies={companies} companyId={companyId} compact />}
         {showCountrySwitch && <CountrySwitch countries={countries} countryId={countryId} compact />}
       </div>
       <button onClick={onOpenSearch}
@@ -66,6 +72,75 @@ function CountrySwitch({ countries, countryId, compact }: { countries: Country[]
           <span aria-hidden>{it.flag}</span><span className={cn(compact && "hidden sm:inline")}>{it.label}</span>
         </button>
       ))}
+    </div>
+  );
+}
+
+/** Global legal-company filter (cookie `mjfg_company`). With a single company it is a static label. */
+function CompanySwitch({ companies, companyId, compact }: { companies: CompanyOption[]; companyId: string | null; compact?: boolean }) {
+  const { t } = useT();
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [current, setCurrent] = useState(companyId);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const listId = useId();
+  useEffect(() => setCurrent(companyId), [companyId]);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+
+  const selected = companies.find((c) => c.id === current) ?? null;
+  const choose = (id: string | null) => {
+    setOpen(false);
+    if (id === current) return;
+    setCurrent(id);
+    start(async () => { await setCompanyFilter(id); router.refresh(); });
+  };
+  const pill = "flex h-9 min-w-0 items-center gap-2 rounded-xl border border-line bg-surface px-2.5 text-xs font-semibold tracking-wide";
+
+  if (companies.length === 1 && !selected) {
+    const only = companies[0];
+    return (
+      <div className={cn(pill, "text-ink-2")} title={only.name}>
+        <CompanyDot color={only.color} />
+        <span className={cn("truncate", compact ? "max-w-[96px]" : "max-w-[180px]")}>{only.name}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-w-0" ref={ref}>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open} aria-controls={listId}
+        aria-label={`${t("companies.filter")}: ${selected?.name ?? t("companies.all")}`}
+        className={cn(pill, "text-ink transition hover:border-line-strong", open && "border-line-strong bg-surface-2", pending && "opacity-70")}>
+        {selected ? <CompanyDot color={selected.color} /> : <Layers className="h-3.5 w-3.5 shrink-0 text-moss" />}
+        <span className={cn("truncate", compact ? "max-w-[64px] min-[400px]:max-w-[96px] sm:max-w-[140px]" : "max-w-[180px]")}>{selected?.name ?? t("companies.all")}</span>
+        {pending ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted" /> : <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted transition-transform", open && "rotate-180")} />}
+      </button>
+      {open && (
+        <div id={listId} role="listbox" aria-label={t("companies.filter")}
+          className="absolute left-0 top-11 z-50 w-[min(86vw,288px)] overflow-hidden rounded-2xl border border-line-strong bg-surface py-1.5 shadow-2xl animate-fade-up">
+          <div className="px-4 pb-1.5 pt-1 text-[10px] uppercase tracking-[0.16em] text-faint">{t("companies.title")}</div>
+          {[{ id: null as string | null, name: t("companies.all"), color: "" }, ...companies].map((c) => {
+            const active = c.id === current;
+            return (
+              <button key={c.id ?? "all"} type="button" role="option" aria-selected={active} onClick={() => choose(c.id)}
+                className={cn("flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm transition-colors hover:bg-surface-2",
+                  active ? "text-ink" : "text-ink-2 hover:text-ink")}>
+                {c.id ? <CompanyDot color={c.color} className="h-2.5 w-2.5" /> : <Layers className="h-4 w-4 shrink-0 text-moss" />}
+                <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                {active && <Check className="h-4 w-4 shrink-0 text-amber" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { InviteLinkDialog } from "@/components/shared/invite-link-dialog";
 import { Banknote, Mail, Pencil, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { CompanySelect } from "@/components/shared/company";
 import { FileUploader } from "@/components/shared/file-uploader";
 import { Button } from "@/components/ui/button";
 import { FormDialog, FormGrid, Input, Select, Textarea, type FormAction, type Option } from "@/components/ui/form";
@@ -14,6 +15,7 @@ import { createEmployee, inviteEmployee, saveCompensation, setEmployeePhoto, upd
 export type EmployeeValues = {
   id?: string; first_name?: string; last_name?: string | null; email?: string | null; phone?: string | null; job_title?: string | null;
   country_id?: string | null; team_id?: string | null; status?: string; employment_start?: string | null; employment_end?: string | null; notes?: string | null;
+  company_id?: string | null;
 };
 
 const STATUSES = ["active", "on_leave", "inactive", "offboarding"] as const;
@@ -30,6 +32,7 @@ function EmployeeFields({ countries, teams, values }: { countries: Option[]; tea
         <Input name="email" type="email" label={t("employees.email")} defaultValue={values?.email ?? ""} optional maxLength={200} autoComplete="off" />
         <Input name="phone" type="tel" label={t("employees.phone")} defaultValue={values?.phone ?? ""} optional maxLength={40} autoComplete="off" />
       </FormGrid>
+      <CompanySelect value={values ? (values.company_id ?? null) : undefined} />
       <FormGrid cols={3}>
         <Input name="job_title" label={t("employees.jobTitle")} defaultValue={values?.job_title ?? ""} optional maxLength={120} />
         <Select name="country_id" label={t("common.country")} defaultValue={values?.country_id ?? countries[0]?.value ?? ""} options={countries} placeholder="" />

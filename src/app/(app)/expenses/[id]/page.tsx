@@ -90,7 +90,7 @@ export default async function ExpenseDetail({ params }: { params: Promise<{ id: 
               today={todayIn(ctx.timezone)}
               values={{
                 id: e.id, expense_date: e.expense_date, amount: e.amount, currency: e.currency, category: e.category, project_id: e.project_id,
-                machine_id: e.machine_id, employee_id: e.employee_id, description: e.description,
+                machine_id: e.machine_id, employee_id: e.employee_id, description: e.description, company_id: e.company_id,
                 receipt: receipt ? { id: receipt.id, url: receipt.file?.mime_type?.startsWith("image/") ? receiptUrl : null, label: receipt.merchant ?? receipt.file?.original_name ?? ctx.t("expenses.receipt") } : null,
               }} />
           )}

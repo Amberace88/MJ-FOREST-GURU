@@ -3,12 +3,14 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { getT } from "@/i18n/server";
+import type { CompanyLite } from "@/lib/companies";
 import { isSupabaseConfigured } from "@/lib/env";
 import { dashboardKind, type Permission } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 
 export const ORG_COOKIE = "mjfg_org";
 export const COUNTRY_COOKIE = "mjfg_country";
+export const COMPANY_COOKIE = "mjfg_company";
 
 export type Country = {
   id: string;
@@ -49,7 +51,7 @@ async function loadContext() {
     return { user, org: null } as const;
   }
 
-  const [permsRes, rolesRes, employeeRes, profileRes, settingsRes, countriesRes] = await Promise.all([
+  const [permsRes, rolesRes, employeeRes, profileRes, settingsRes, countriesRes, companiesRes] = await Promise.all([
     supabase.rpc("my_permissions", { p_org: org.id }),
     supabase.rpc("my_roles", { p_org: org.id }),
     supabase
@@ -66,6 +68,13 @@ async function loadContext() {
       .eq("organization_id", org.id)
       .eq("is_active", true)
       .order("sort_order"),
+    supabase
+      .from("companies")
+      .select("id, name, color, country_id, is_active")
+      .eq("organization_id", org.id)
+      .is("deleted_at", null)
+      .order("sort_order")
+      .order("name"),
   ]);
 
   const permissions = new Set<string>(permsRes.data ?? []);
@@ -77,6 +86,12 @@ async function loadContext() {
 
   const countryCookie = cookieStore.get(COUNTRY_COOKIE)?.value;
   const countryId = countries.some((c) => c.id === countryCookie) ? countryCookie! : null;
+  // Legal companies of the organization. `companiesAll` keeps inactive ones (badges, edit forms);
+  // `companies` (active) drives the filter and new-record defaults.
+  const companiesAll: CompanyLite[] = companiesRes.data ?? [];
+  const companies = companiesAll.filter((c) => c.is_active);
+  const companyCookie = cookieStore.get(COMPANY_COOKIE)?.value;
+  const companyId = companies.some((c) => c.id === companyCookie) ? companyCookie! : null;
   const settings = settingsRes.data;
   const profile = profileRes.data;
   const locale = profile?.locale ?? settings?.default_language ?? "lv";
@@ -95,6 +110,10 @@ async function loadContext() {
     countries,
     countryId,
     country: countries.find((c) => c.id === countryId) ?? null,
+    companies,
+    companiesAll,
+    companyId,
+    company: companies.find((c) => c.id === companyId) ?? null,
     locale,
     timezone,
     can: (...p: Permission[]) => p.every((x) => permissions.has(x)),

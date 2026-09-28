@@ -18,6 +18,7 @@ const employeeSchema = z.object({
   job_title: zf.text(120).optional(),
   country_id: zf.optUuid(),
   team_id: zf.optUuid(),
+  company_id: zf.optUuid(),
   status: z.enum(STATUSES).default("active"),
   employment_start: zf.optDate(),
   employment_end: zf.optDate(),
@@ -25,6 +26,11 @@ const employeeSchema = z.object({
 });
 
 type EmployeeInput = z.infer<typeof employeeSchema>;
+
+/** company_id only when the form rendered the company select (organization has companies). */
+function companyPatch(d: EmployeeInput, fd: FormData) {
+  return fd.has("company_id") ? { company_id: d.company_id ?? null } : {};
+}
 
 function toRow(d: EmployeeInput) {
   return {
@@ -52,7 +58,7 @@ export async function createEmployee(_prev: ActionResult, fd: FormData): Promise
     return fail(ctx.t("errors.endBeforeStart"), { employment_end: ctx.t("errors.endBeforeStart") });
   }
   const { data, error } = await ctx.supabase.from("employees")
-    .insert({ ...toRow(d), organization_id: ctx.org.id, created_by: ctx.user.id })
+    .insert({ ...toRow(d), ...companyPatch(d, fd), organization_id: ctx.org.id, created_by: ctx.user.id })
     .select("id").single();
   if (error) return dbFail("employee.create", error);
   revalidatePath("/employees");
@@ -69,7 +75,7 @@ export async function updateEmployee(id: string, _prev: ActionResult, fd: FormDa
   if (d.employment_end && d.employment_start && d.employment_end < d.employment_start) {
     return fail(ctx.t("errors.endBeforeStart"), { employment_end: ctx.t("errors.endBeforeStart") });
   }
-  const { error } = await ctx.supabase.from("employees").update(toRow(d)).eq("id", id).eq("organization_id", ctx.org.id);
+  const { error } = await ctx.supabase.from("employees").update({ ...toRow(d), ...companyPatch(d, fd) }).eq("id", id).eq("organization_id", ctx.org.id);
   if (error) return dbFail("employee.update", error);
   revalidatePath(`/employees/${id}`);
   revalidatePath("/employees");

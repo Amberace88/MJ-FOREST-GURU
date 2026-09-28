@@ -14,11 +14,15 @@ export const metadata: Metadata = { title: "Live Map" };
 const TONE = { active: "ok", attention: "warn", critical: "crit", offline: "off" } as const;
 const ICON = { machine: Tractor, project: TreePine, employee: Users } as const;
 
-export default async function MapPage() {
+export default async function MapPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const ctx = await requireOrg();
-  const data = await getMapData(ctx);
+  const sp = await searchParams;
+  const selected = ctx.countries.find((c) => c.code === (sp.region ?? "").toUpperCase()) ?? (sp.region === "all" ? null : ctx.country);
+  const data = await getMapData(ctx, { countryId: selected?.id ?? null });
+  const markers = data.markers;
+  const regionCodes = selected ? [selected.code] : ctx.countries.map((c) => c.code);
   const canGps = ctx.canAny("view_gps", "view_live_gps", "view_gps_history");
-  const groups = (["machine", "project", "employee"] as const).map((k) => ({ k, items: data.markers.filter((m) => m.kind === k) })).filter((g) => g.items.length);
+  const groups = (["machine", "project", "employee"] as const).map((k) => ({ k, items: markers.filter((m) => m.kind === k) })).filter((g) => g.items.length);
   const counts = {
     active: data.markers.filter((m) => m.status === "active").length,
     attention: data.markers.filter((m) => m.status === "attention").length,
@@ -32,10 +36,18 @@ export default async function MapPage() {
         actions={<div className="flex flex-wrap gap-1.5">
           {(Object.keys(counts) as (keyof typeof counts)[]).map((k) => <Badge key={k} tone={TONE[k]} dot>{ctx.label("map.legend", k)} · {counts[k]}</Badge>)}
         </div>} />
+      <nav className="mb-4 flex flex-wrap gap-2" aria-label={ctx.t("common.country")}>
+        {[{ key: "all", label: `🌍 ${ctx.t("common.allCountries")}`, active: !selected }, ...ctx.countries.map((c) => ({ key: c.code, label: `${c.flag ?? ""} ${c.name}`, active: selected?.id === c.id }))].map((r) => (
+          <Link key={r.key} href={`/map?region=${r.key}`} scroll={false}
+            className={`rounded-xl border px-3.5 py-2 text-sm font-medium transition-all ${r.active ? "border-forest-500/60 bg-forest-700 text-ink shadow-[0_6px_18px_-10px_var(--forest-500)]" : "border-line bg-surface text-muted hover:border-line-strong hover:text-ink"}`}>
+            {r.label}
+          </Link>
+        ))}
+      </nav>
       {!canGps && <div className="mb-4"><NoPermission text={ctx.t("map.noGpsPermission")} /></div>}
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <Card className="overflow-hidden p-2">
-          <LiveMap markers={data.markers} height="calc(100dvh - 240px)" maponState={data.maponState} maponLastSuccess={data.maponLastSuccess} />
+          <LiveMap key={selected?.code ?? "all"} markers={markers} regions={regionCodes} height="calc(100dvh - 290px)" maponState={data.maponState} maponLastSuccess={data.maponLastSuccess} />
         </Card>
         <div className="space-y-4 xl:max-h-[calc(100dvh-224px)] xl:overflow-y-auto">
           {groups.length === 0 && <Card><CardBody className="pt-5 text-sm text-muted">{ctx.t("map.noPosition")}</CardBody></Card>}

@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { AlertTriangle, Boxes, Clock, Fuel, ShieldCheck, Tractor, TreePine, Users, Wallet, Wrench } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 import { AreaTrend, Bars, Donut, DonutLegend } from "@/components/charts";
 import { AlertList, type AlertRow } from "@/components/dashboard/alert-list";
+import { CompaniesCard } from "@/components/dashboard/companies-card";
+import { ProfitabilityCard } from "@/components/dashboard/profitability-card";
 import { EmployeeQuickActions, MiniStat, OwnerQuickActions, type Stats } from "@/components/dashboard/widgets";
 import { LiveMap } from "@/components/map";
 import { Badge, DemoBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { KpiCard } from "@/components/ui/kpi";
-import { Avatar, EmptyState, Progress } from "@/components/ui/misc";
+import { Avatar, EmptyState, Progress, Skeleton } from "@/components/ui/misc";
 import { requireOrg, type OrgContext } from "@/lib/context";
 import { addDays, fmtDate, fmtHours, fmtMoney, fmtMoneyMap, fmtNumber, fmtShortDate, fmtTime, hoursBetween, todayIn } from "@/lib/format";
 import { getMapData } from "@/lib/map-data";
@@ -34,7 +37,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const header = (
     <header className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between animate-fade-up">
-      <div>
+      <div className="shrink-0">
         <div className="mb-1 flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-muted">
           <span>{ctx.t("brand.name")}</span><span className="text-faint">·</span><span>{ctx.kind === "owner" ? ctx.t("brand.operationsCenter") : ctx.t("dashboard.title")}</span>
           {ctx.org.is_demo && <DemoBadge />}
@@ -151,13 +154,19 @@ async function OwnerDashboard({ ctx, stats, alerts }: { ctx: OrgContext; stats: 
         <Card className="overflow-hidden">
           <CardHeader title={ctx.t("dashboard.liveOperations")} subtitle={`${mapData.markers.filter((m) => m.kind === "machine").length} ${ctx.t("map.machines").toLowerCase()} · ${mapData.markers.filter((m) => m.kind === "project").length} ${ctx.t("map.projects").toLowerCase()}`}
             action={<ButtonLink href="/map" size="sm" variant="secondary">{ctx.t("map.title")}</ButtonLink>} />
-          <div className="px-3 pb-3"><LiveMap markers={mapData.markers} height={420} maponState={mapData.maponState} maponLastSuccess={mapData.maponLastSuccess} /></div>
+          <div className="px-3 pb-3"><LiveMap markers={mapData.markers} height={420} regions={ctx.country ? [ctx.country.code] : ctx.countries.map((c) => c.code)} maponState={mapData.maponState} maponLastSuccess={mapData.maponLastSuccess} /></div>
         </Card>
         <Card>
           <CardHeader title={ctx.t("dashboard.attention")} subtitle={`${alerts.length} ${ctx.t("alerts.title").toLowerCase()}`} icon={<AlertTriangle className="h-4 w-4" />}
             action={<ButtonLink href="/alerts" size="sm" variant="ghost">{ctx.t("common.viewAll")}</ButtonLink>} />
           <CardBody className="max-h-[440px] overflow-y-auto"><AlertList alerts={alerts} tr={ctx} limit={9} /></CardBody>
         </Card>
+      </section>
+
+      {/* COMPANIES + PROFITABILITY */}
+      <section className="grid gap-6 xl:grid-cols-2">
+        <Suspense fallback={<Skeleton className="h-64" />}><CompaniesCard ctx={ctx} /></Suspense>
+        <Suspense fallback={<Skeleton className="h-64" />}><ProfitabilityCard ctx={ctx} /></Suspense>
       </section>
 
       {/* CHARTS */}
@@ -412,7 +421,7 @@ async function LeadDashboard({ ctx, stats, alerts, title, foreman }: { ctx: OrgC
       {mapData.canGps && mapData.markers.length > 0 && (
         <Card className="overflow-hidden">
           <CardHeader title={ctx.t("map.title")} />
-          <div className="px-3 pb-3"><LiveMap markers={mapData.markers} height={360} maponState={mapData.maponState} /></div>
+          <div className="px-3 pb-3"><LiveMap markers={mapData.markers} height={360} regions={ctx.country ? [ctx.country.code] : ctx.countries.map((c) => c.code)} maponState={mapData.maponState} /></div>
         </Card>
       )}
     </div>

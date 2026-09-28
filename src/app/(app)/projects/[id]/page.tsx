@@ -19,16 +19,20 @@ import { getOptions } from "@/lib/queries";
 import { statusTone } from "@/lib/utils";
 import { archiveProject, unassignMachine, unassignWorker } from "../actions";
 import { AddWorkSiteDialog, AssignMachineDialog, AssignTeamDialog, AssignWorkerDialog, EditProjectDialog } from "../components";
+import { FinanceTab } from "./finance";
 
 export const metadata: Metadata = { title: "Darba objekts" };
 
-const TABS = ["overview", "workers", "machines", "hours", "production", "fuel", "expenses", "repairs", "tasks", "documents", "comments", "activity"] as const;
+const BASE_TABS = ["overview", "workers", "machines", "hours", "production", "fuel", "expenses", "repairs", "tasks", "documents", "comments", "activity"] as const;
+type TabKey = (typeof BASE_TABS)[number] | "finance";
 
 export default async function ProjectDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const ctx = await requireOrg();
   const { id } = await params;
   const sp = await searchParams;
-  const tab = (TABS as readonly string[]).includes(sp.tab ?? "") ? sp.tab! : "overview";
+  const tabs: TabKey[] = ctx.can("view_finance") ? ["overview", "finance", ...BASE_TABS.slice(1)] : [...BASE_TABS];
+  const tab: TabKey = (tabs as string[]).includes(sp.tab ?? "") ? (sp.tab as TabKey) : "overview";
+  const tabLabel = (k: TabKey) => (k === "finance" ? ctx.t("finance.tab") : ctx.t(`projects.tabs.${k}`));
 
   const { data: p } = await ctx.supabase.from("projects").select("*").eq("id", id).eq("organization_id", ctx.org.id).maybeSingle();
   if (!p) notFound();
@@ -64,7 +68,7 @@ export default async function ProjectDetail({ params, searchParams }: { params: 
           )}
         </>}
       />
-      <TabNav active={tab} items={TABS.map((k) => ({ key: k, label: ctx.t(`projects.tabs.${k}`), href: `${path}?tab=${k}`, count: k === "workers" ? counts.workers : k === "machines" ? counts.machines : null }))} />
+      <TabNav active={tab} items={tabs.map((k) => ({ key: k, label: tabLabel(k), href: `${path}?tab=${k}`, count: k === "workers" ? counts.workers : k === "machines" ? counts.machines : null }))} />
 
       {tab === "overview" && (
         <div className="space-y-6">
@@ -123,6 +127,7 @@ export default async function ProjectDetail({ params, searchParams }: { params: 
         </div>
       )}
 
+      {tab === "finance" && <FinanceTab ctx={ctx} project={p} />}
       {tab === "workers" && <WorkersTab ctx={ctx} projectId={id} workers={workersRes.data ?? []} teams={(teamsRes.data ?? []).map((t) => t.team as { id: string; name: string } | null).filter(Boolean) as { id: string; name: string }[]} canManage={canManage} />}
       {tab === "machines" && <MachinesTab ctx={ctx} projectId={id} links={machinesRes.data ?? []} canManage={canManage} />}
       {tab === "hours" && <HoursTab ctx={ctx} projectId={id} tz={tz} />}

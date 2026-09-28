@@ -12,6 +12,7 @@ const projectSchema = z.object({
   code: zf.reqText(40),
   name: zf.reqText(200),
   country_id: zf.uuid(),
+  company_id: zf.optUuid(),
   client_name: zf.text(200).optional(),
   status: z.enum(["planned", "active", "paused", "completed", "cancelled"]).default("planned"),
   location_name: zf.text(200).optional(),
@@ -42,7 +43,7 @@ export async function createProject(_prev: ActionResult, fd: FormData): Promise<
   const d = parsed.data;
   if (d.expected_end_date && d.start_date && d.expected_end_date < d.start_date) return fail(ctx.t("errors.endBeforeStart"), { expected_end_date: ctx.t("errors.endBeforeStart") });
   const { data, error } = await ctx.supabase.from("projects").insert({
-    ...d, code: d.code.toUpperCase(), organization_id: ctx.org.id, site_identifiers: identifiersFrom(fd), created_by: ctx.user.id,
+    ...d, code: d.code.toUpperCase(), company_id: d.company_id ?? null, organization_id: ctx.org.id, site_identifiers: identifiersFrom(fd), created_by: ctx.user.id,
   }).select("id").single();
   if (error) return dbFail("project.create", error);
   revalidatePath("/projects");
@@ -57,11 +58,14 @@ export async function updateProject(id: string, _prev: ActionResult, fd: FormDat
   const d = parsed.data;
   const { error } = await ctx.supabase.from("projects").update({
     ...d, code: d.code.toUpperCase(), site_identifiers: identifiersFrom(fd),
+    // company select is only rendered when the organization has companies → otherwise keep the stored value
+    ...(fd.has("company_id") ? { company_id: d.company_id ?? null } : {}),
     latitude: d.latitude ?? null, longitude: d.longitude ?? null, area_ha: d.area_ha ?? null,
     start_date: d.start_date ?? null, expected_end_date: d.expected_end_date ?? null, actual_end_date: d.actual_end_date ?? null,
   }).eq("id", id).eq("organization_id", ctx.org.id);
   if (error) return dbFail("project.update", error);
   revalidatePath(`/projects/${id}`);
+  revalidatePath("/projects");
   return { ok: true };
 }
 
