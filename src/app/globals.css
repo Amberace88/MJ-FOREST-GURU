@@ -132,6 +132,7 @@
   --animate-slide-up: slide-up 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-pulse-ring: pulse-ring 2s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
   --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-page-in: page-in 0.28s ease-out both;
 }
 
 @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -139,6 +140,8 @@
 @keyframes slide-in-right { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
 @keyframes slide-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
 @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.7; } 80%, 100% { transform: scale(2.4); opacity: 0; } }
+/* opacity only: a transform here would re-parent position:fixed children (dialogs, bottom bars) */
+@keyframes page-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes shimmer { from { background-position: -400px 0; } to { background-position: 400px 0; } }
 
 html { background: var(--bg); transition: background-color 0.35s ease; }
