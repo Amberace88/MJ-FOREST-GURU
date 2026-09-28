@@ -118,7 +118,7 @@ export function MapSearch({ onPick, places = [], countries = ["lv", "se", "is"],
         </button>
       </div>
       {open && results.length > 0 && (
-        <ul role="listbox" className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-80 overflow-y-auto rounded-xl border border-line-strong bg-surface/95 p-1 shadow-2xl backdrop-blur animate-fade-up">
+        <ul role="listbox" className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-80 overflow-y-auto rounded-xl border border-line-strong bg-surface p-1 shadow-2xl animate-fade-up">
           {results.map((r, i) => (
             <li key={r.key}>
               <button type="button" role="option" aria-selected={i === active} onMouseEnter={() => setActive(i)} onClick={() => pick(r)}
