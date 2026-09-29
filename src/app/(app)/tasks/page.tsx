@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BOARD_COLUMNS } from "@/lib/constants";
 import { AlertTriangle, Archive, CalendarClock, ClipboardList, ListTodo, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { Comments } from "@/components/shared/comments";
@@ -15,7 +16,7 @@ import { getOptions } from "@/lib/queries";
 import { cn, likeTerm, priorityTone, searchParamsToString, sp as one, statusTone } from "@/lib/utils";
 import { RoutedDialog } from "../receipts/routed-dialog";
 import { archiveTask, setTaskStatus } from "./actions";
-import { BOARD_COLUMNS, TaskBoard, type BoardStatus, type BoardTask } from "./board";
+import { TaskBoard, type BoardStatus, type BoardTask } from "./board";
 import { EditTaskDialog, NewTaskDialog, type TaskFormOptions } from "./components";
 
 export const metadata: Metadata = { title: "Uzdevumi" };

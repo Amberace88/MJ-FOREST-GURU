@@ -1,12 +1,12 @@
 "use client";
 
+import { SAFETY_SECTIONS } from "@/lib/constants";
 import { FilePlus2, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox, FormDialog, FormGrid, Input, Select, Textarea, type FormAction } from "@/components/ui/form";
 import { useT } from "@/i18n/client";
 import { createRule, publishVersion, updateRule } from "./actions";
 
-export const SAFETY_SECTIONS = ["general", "forestry", "machinery", "chainsaw", "ppe", "emergency", "fire", "first_aid", "accident_reporting", "country_specific"] as const;
 
 type CountryOpt = { id: string; name: string; flag: string | null };
 export type RuleValues = {

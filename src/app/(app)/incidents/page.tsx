@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_TYPES } from "@/lib/constants";
 import { AlertOctagon, ClipboardCheck, Siren, TriangleAlert } from "lucide-react";
 import { Badge, DemoBadge } from "@/components/ui/badge";
 import { FilterBar } from "@/components/ui/filter-bar";
@@ -10,7 +11,7 @@ import { addDays, fmtDateTime, zonedMidnightUtc } from "@/lib/format";
 import { getOptions } from "@/lib/queries";
 import { likeTerm, one as first, searchParamsToString, severityTone, sp as one, statusTone } from "@/lib/utils";
 import { isIsoDate } from "../analytics/period";
-import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_TYPES, ReportIncidentDialog } from "./components";
+import { ReportIncidentDialog } from "./components";
 
 export const metadata: Metadata = { title: "Incidenti" };
 const PAGE = 25;

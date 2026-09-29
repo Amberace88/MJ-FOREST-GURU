@@ -1,5 +1,6 @@
 "use client";
 
+import { EXPENSE_CATEGORIES } from "@/lib/constants";
 import { Check, CornerUpLeft, Pencil, Plus, Send, X } from "lucide-react";
 import { useState } from "react";
 import { CompanySelect } from "@/components/shared/company";
@@ -10,7 +11,6 @@ import { CURRENCIES, type ReceiptFormOptions } from "../receipts/types";
 import { ReceiptPhotoField } from "../receipts/upload";
 import { createExpense, decideExpense, updateExpense } from "./actions";
 
-export const EXPENSE_CATEGORIES = ["fuel", "repair", "parts", "accommodation", "food", "transport", "tools", "materials", "other"] as const;
 
 export type ExpenseValues = {
   id: string; expense_date: string; amount: number; currency: string; category: string; project_id: string | null;

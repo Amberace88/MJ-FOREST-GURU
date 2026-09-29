@@ -1,5 +1,6 @@
 "use client";
 
+import { INCIDENT_TYPES, INCIDENT_SEVERITIES, INCIDENT_STATUSES } from "@/lib/constants";
 import { Crosshair, Loader2, Siren } from "lucide-react";
 import { useState } from "react";
 import { FileUploader } from "@/components/shared/file-uploader";
@@ -10,9 +11,6 @@ import { useT } from "@/i18n/client";
 import { utcToLocalInput } from "@/lib/format";
 import { reportIncident } from "./actions";
 
-export const INCIDENT_TYPES = ["injury", "near_miss", "property_damage", "environmental", "fire", "vehicle", "other"] as const;
-export const INCIDENT_SEVERITIES = ["low", "medium", "high", "critical"] as const;
-export const INCIDENT_STATUSES = ["open", "investigating", "action_required", "resolved", "closed"] as const;
 
 type Opts = { projects: Option[]; machines: Option[]; employees: Option[] };
 

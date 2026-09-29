@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SAFETY_SECTIONS } from "@/lib/constants";
 import { CheckCircle2, History, RefreshCcw, ShieldAlert, ShieldCheck, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { fmtDate, fmtDateTime } from "@/lib/format";
 import { cn, sp as one } from "@/lib/utils";
 import { fetchAll } from "../analytics/fetch-all";
 import { acknowledgeRule } from "./actions";
-import { EditRuleDialog, NewRuleDialog, NewVersionDialog, SAFETY_SECTIONS } from "./components";
+import { EditRuleDialog, NewRuleDialog, NewVersionDialog } from "./components";
 
 export const metadata: Metadata = { title: "Drošība" };
 

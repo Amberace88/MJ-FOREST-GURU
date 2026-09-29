@@ -1,5 +1,6 @@
 "use client";
 
+import { BOARD_COLUMNS } from "@/lib/constants";
 import { AlertTriangle, CalendarClock, GripVertical, Tractor, TreePine, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -10,7 +11,6 @@ import { useT } from "@/i18n/client";
 import { cn, priorityTone } from "@/lib/utils";
 import { updateTaskStatus } from "./actions";
 
-export const BOARD_COLUMNS = ["todo", "in_progress", "waiting", "done"] as const;
 export type BoardStatus = (typeof BOARD_COLUMNS)[number];
 
 export type BoardTask = {

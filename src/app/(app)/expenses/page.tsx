@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { EXPENSE_CATEGORIES } from "@/lib/constants";
 import { Hourglass, Wallet } from "lucide-react";
 import Link from "next/link";
 import { ExpenseTable, type ExpenseRow } from "@/components/shared/lists";
@@ -11,7 +12,7 @@ import { fmtMoney, todayIn } from "@/lib/format";
 import { getOptions } from "@/lib/queries";
 import { likeTerm, searchParamsToString, sp as one } from "@/lib/utils";
 import { defaultCurrency, receiptFormOptions } from "../receipts/options";
-import { EXPENSE_CATEGORIES, NewExpenseDialog } from "./components";
+import { NewExpenseDialog } from "./components";
 
 export const metadata: Metadata = { title: "Izdevumi" };
 const PAGE = 30;

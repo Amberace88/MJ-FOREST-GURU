@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_TYPES } from "@/lib/constants";
 import { Camera, Check, ClipboardList, History, MapPin, MessageSquare, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -14,7 +15,6 @@ import { requireOrg } from "@/lib/context";
 import { fmtDateTime } from "@/lib/format";
 import { cn, one, severityTone, statusTone } from "@/lib/utils";
 import { setIncidentStatus, updateIncidentResponse } from "../actions";
-import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_TYPES } from "../components";
 
 export const metadata: Metadata = { title: "Incidents" };
 
