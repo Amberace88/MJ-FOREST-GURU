@@ -2,14 +2,14 @@ import type { BuiltinMaterial } from "../types";
 
 export const platformGuide: BuiltinMaterial = {
   key: "platform-guide",
-  version: 1,
+  version: 2,
   category: "platform",
   country: null,
-  title: "MJ Forest Guru platformas lietošanas rokasgrāmata",
+  title: "Darbinieka rokasgrāmata — MJ Forest Guru ikdienā",
   subtitle: "Kā ikdienā lietot platformu telefonā un datorā — no pirmās pieslēgšanās līdz maiņas beigām",
   summary:
     "Praktiska rokasgrāmata darbiniekiem, meistariem un mehāniķiem: pieslēgšanās, instalēšana telefonā, darba maiņas uzskaite, ātrās atskaites, darbs bez interneta un biežākās kļūdas. Jāizlasa un jāapstiprina pirms platformas lietošanas.",
-  audience: ["employee", "foreman", "mechanic", "manager"],
+  audience: ["employee", "foreman", "mechanic"],
   requiresAck: true,
   readingMinutes: 12,
   body: `## Kas ir platforma

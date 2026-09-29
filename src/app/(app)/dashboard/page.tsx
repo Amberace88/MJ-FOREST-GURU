@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AlertTriangle, Boxes, Clock, Fuel, ShieldCheck, Tractor, TreePine, Users, Wallet, Wrench } from "lucide-react";
+import { AlertTriangle, Boxes, Clock, Fuel, ShieldCheck, Tractor, TreePine, Users, Wallet, Wrench, Cake } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AreaTrend, Bars, Donut, DonutLegend } from "@/components/charts";
@@ -12,6 +12,7 @@ import { Badge, DemoBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { KpiCard } from "@/components/ui/kpi";
+import { namedaysToday } from "@/lib/namedays";
 import { Avatar, EmptyState, Progress, Skeleton } from "@/components/ui/misc";
 import { requireOrg, type OrgContext } from "@/lib/context";
 import { addDays, fmtDate, fmtHours, fmtMoney, fmtMoneyMap, fmtNumber, fmtShortDate, fmtTime, hoursBetween, todayIn } from "@/lib/format";
@@ -47,6 +48,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           {new Intl.DateTimeFormat("lv-LV", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: ctx.timezone }).format(new Date())}
           {ctx.country ? ` · ${ctx.country.flag ?? ""} ${ctx.country.name}` : ""}
         </p>
+        {(() => {
+          const names = namedaysToday("Europe/Riga");
+          return names.length ? (
+            <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-amber/25 bg-amber/[0.07] px-2.5 py-0.5 text-xs text-ink-2 animate-fade-in" title="Latviešu vārda dienas šodien">
+              <Cake className="h-3.5 w-3.5 text-amber" aria-hidden />
+              <span className="text-muted">Vārda dienas:</span> <span className="font-medium text-ink">{names.join(", ")}</span>
+            </p>
+          ) : null;
+        })()}
       </div>
       {ctx.kind === "owner" && <OwnerQuickActions tr={ctx} perms={ctx.permissions} />}
     </header>
