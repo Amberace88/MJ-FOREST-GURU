@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="relative z-10 mx-auto grid min-h-dvh w-full max-w-6xl items-center gap-10 px-5 py-10 lg:grid-cols-[1.1fr_440px] lg:px-10">
         <section className="hidden lg:block animate-fade-up">
           <Image src="/brand/logo-dark-bg.png" alt="MJ Forest Guru" width={1400} height={476} priority className="h-auto w-[520px] drop-shadow-[0_20px_40px_rgba(0,0,0,0.6)]" />
-          <p className="mt-6 max-w-md font-display text-2xl font-semibold uppercase tracking-[0.12em] text-ink-2">{lv.brand.subtitle}</p>
+          <p className="mt-6 whitespace-nowrap font-display text-lg font-semibold uppercase tracking-[0.1em] text-ink-2 xl:text-xl">{lv.brand.subtitle}</p>
           <p className="mt-3 text-xs uppercase tracking-[0.3em] text-muted">{lv.brand.footer}</p>
         </section>
         <section className="mx-auto w-full max-w-[440px] animate-fade-up" style={{ animationDelay: "80ms" }}>
