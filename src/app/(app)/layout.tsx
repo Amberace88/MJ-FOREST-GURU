@@ -16,7 +16,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // First-run wizard for owners until the company setup is completed
   const h = await headers();
   const path = h.get("x-pathname") ?? "";
-  if (ctx.roles.includes("owner") && !ctx.settings?.setup_completed_at && !ctx.org.is_demo && !path.startsWith("/setup")) {
+  // Only the start page sends owners to the wizard — every other section stays usable meanwhile.
+  if (ctx.roles.includes("owner") && !ctx.settings?.setup_completed_at && !ctx.org.is_demo && (path === "/dashboard" || path === "/")) {
     redirect("/setup");
   }
 
