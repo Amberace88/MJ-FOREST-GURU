@@ -49,6 +49,90 @@ export type Database = {
         }
         Relationships: []
       }
+      business_contacts: {
+        Row: {
+          id: string
+          organization_id: string
+          country_id: string | null
+          kind: string
+          status: string
+          company_name: string
+          contact_name: string | null
+          role: string | null
+          phone: string | null
+          email: string | null
+          website: string | null
+          notes: string | null
+          last_contact_at: string | null
+          next_action: string | null
+          next_action_at: string | null
+          seed_key: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          country_id?: string | null
+          kind?: string
+          status?: string
+          company_name: string
+          contact_name?: string | null
+          role?: string | null
+          phone?: string | null
+          email?: string | null
+          website?: string | null
+          notes?: string | null
+          last_contact_at?: string | null
+          next_action?: string | null
+          next_action_at?: string | null
+          seed_key?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          country_id?: string | null
+          kind?: string
+          status?: string
+          company_name?: string
+          contact_name?: string | null
+          role?: string | null
+          phone?: string | null
+          email?: string | null
+          website?: string | null
+          notes?: string | null
+          last_contact_at?: string | null
+          next_action?: string | null
+          next_action_at?: string | null
+          seed_key?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_contacts_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       comments: {
         Row: {
           id: string
@@ -753,6 +837,7 @@ export type Database = {
           created_at: string
           updated_at: string
           deleted_at: string | null
+          contact_id: string | null
         }
         Insert: {
           id?: string
@@ -785,6 +870,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
           deleted_at?: string | null
+          contact_id?: string | null
         }
         Update: {
           id?: string
@@ -817,6 +903,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
           deleted_at?: string | null
+          contact_id?: string | null
         }
         Relationships: [
           {
@@ -824,6 +911,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forest_leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "business_contacts"
             referencedColumns: ["id"]
           },
           {

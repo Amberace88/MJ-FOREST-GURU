@@ -33,9 +33,9 @@ const FLAG: Record<string, string> = { LV: "🇱🇻", SE: "🇸🇪", IS: "🇮
 
 const layerId = (id: string) => `fl-${id}`;
 
-export function ForestMap({ countries, leads, projects, height = "calc(100dvh - 250px)", onAddLead, focusLead }: {
+export function ForestMap({ countries, leads, projects, height = "calc(100dvh - 250px)", onAddLead, focusLead, focusPoint }: {
   countries: string[]; leads: ForestLead[]; projects: ForestProject[]; height?: string;
-  onAddLead?: (p: PickedPoint) => void; focusLead?: string | null;
+  onAddLead?: (p: PickedPoint) => void; focusLead?: string | null; focusPoint?: { lat: number; lng: number } | null;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MLMap | null>(null);
@@ -164,6 +164,27 @@ export function ForestMap({ countries, leads, projects, height = "calc(100dvh - 
     })();
     return () => { cancelled = true; };
   }, [ready, leads, projects, showLeads, showProjects, focusLead]);
+
+  // deep link (?focus=lat,lng) — e.g. a Swedish felling notice from "Klienti un darbi"
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !focusPoint) return;
+    const c = guessCountry(focusPoint.lng, focusPoint.lat);
+    if (c === "SE" && !("se-sks-avverkningsanmalan" in activeRef.current)) {
+      const l = FOREST_LAYERS.find((x) => x.id === "se-sks-avverkningsanmalan");
+      if (l) { setCountry("SE"); addForestLayer(map, l.id, l.defaultOpacity); setActive((a) => ({ ...a, [l.id]: l.defaultOpacity })); }
+    }
+    map.flyTo({ center: [focusPoint.lng, focusPoint.lat], zoom: 13.5, duration: 1200 });
+    (async () => {
+      const maplibre = await loadMaplibre();
+      pickRef.current?.remove();
+      const el = document.createElement("div");
+      el.className = "mjfg-pin";
+      el.innerHTML = "<span></span>";
+      pickRef.current = new maplibre.Marker({ element: el, anchor: "bottom" }).setLngLat([focusPoint.lng, focusPoint.lat]).addTo(map);
+      setPicked({ lat: focusPoint.lat, lng: focusPoint.lng, country: c, region: null, municipality: null });
+    })();
+  }, [ready, focusPoint]);
 
   const onPick = async (p: SearchPick) => {
     const map = mapRef.current;
