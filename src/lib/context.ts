@@ -43,6 +43,8 @@ async function loadContext() {
   const orgs = (memberships ?? [])
     .map((m) => m.organizations)
     .filter((o): o is NonNullable<typeof o> => Boolean(o))
+    // demo organizations are hidden in production unless explicitly enabled
+    .filter((o) => !o.is_demo || process.env.SHOW_DEMO_ORGS === "true")
     // real company first; demo organizations only when explicitly selected
     .sort((a, b) => Number(a.is_demo) - Number(b.is_demo) || a.name.localeCompare(b.name));
   const org = orgs.find((o) => o.id === preferredOrg) ?? orgs[0] ?? null;
