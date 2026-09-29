@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { dbFail, fail, parseForm, zf, type ActionResult } from "@/lib/actions";
 import { MARKET_DIRECTORY } from "@/lib/business/directory";
+import { syncTendersIfStale } from "@/lib/business/tender-sync";
 import { requireOrg } from "@/lib/context";
 
 const PATH = "/business";
@@ -124,4 +125,14 @@ export async function addLeadFrom(_prev: ActionResult, fd: FormData): Promise<Ac
   revalidatePath(PATH);
   revalidatePath("/forest-map");
   return { ok: true, message: "Pievienots iespējām" };
+}
+
+/** "Atjaunot" — pulls the newest IUB / TED notices right now. */
+export async function refreshTenders(_prev: ActionResult, _fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("manage_projects") && !ctx.can("view_finance")) return fail(ctx.t("errors.permission"));
+  const r = await syncTendersIfStale({ force: true });
+  revalidatePath(PATH);
+  if (!r.ok) return fail(r.error === "no-service-role" ? "Serverim nav piekļuves atslēgas (service role)." : "Avots īslaicīgi neatbild — mēģini vēlāk.");
+  return { ok: true, message: r.added ? `Atrasti ${r.added} jauni paziņojumi` : "Jaunu paziņojumu nav — viss ir aktuāls" };
 }

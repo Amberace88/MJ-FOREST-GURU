@@ -23,7 +23,7 @@ export async function addComment(entityType: string, entityId: string, path: str
 const fileSchema = z.object({
   bucket: z.enum(["receipts", "documents", "media"]),
   path: z.string().min(10).max(500),
-  entityType: z.enum(["employee", "machine", "project", "organization", "safety_rule", "repair", "expense", "fuel", "incident", "task", "production", "receipt"]),
+  entityType: z.enum(["employee", "machine", "project", "organization", "safety_rule", "repair", "expense", "fuel", "incident", "task", "production", "receipt", "contract"]),
   entityId: z.string().uuid().nullable(),
   kind: z.enum(["photo", "video", "before", "after", "receipt", "document", "avatar", "other"]),
   originalName: z.string().max(255).optional(),

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Pencil, Plus, Trash2, TreePine } from "lucide-react";
+import { ArrowRight, FileSignature, Pencil, Plus, Trash2, TreePine } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   STAGE_PROBABILITY, type LeadStatus,
 } from "@/lib/forest/leads";
 import { cn } from "@/lib/utils";
+import { contractFromLead } from "../contracts/actions";
 import { convertLeadToProject, createLead, deleteLead, setLeadStatus, updateLead } from "./actions";
 
 export type LeadRow = {
@@ -111,6 +112,11 @@ export function EditLeadDialog({ lead, countries, companies, countryCodes, openR
 export function LeadActions({ lead }: { lead: LeadRow }) {
   return (
     <span className="inline-flex items-center gap-1">
+      {(lead.status === "offer" || lead.status === "won") && (
+        <ActionButton action={contractFromLead.bind(null, lead.id) as FormAction} variant="ghost" size="sm">
+          <FileSignature className="h-4 w-4" /><span className="hidden lg:inline">Līgums</span>
+        </ActionButton>
+      )}
       {lead.project_id ? (
         <Link href={`/projects/${lead.project_id}`} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-ok hover:bg-surface-2"><TreePine className="h-3.5 w-3.5" /> Objekts</Link>
       ) : lead.status !== "lost" ? (

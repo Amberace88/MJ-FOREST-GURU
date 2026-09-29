@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Archive, MapPin } from "lucide-react";
+import { Archive, FileSignature, MapPin } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Activity } from "@/components/shared/activity";
@@ -43,12 +43,15 @@ export default async function ProjectDetail({ params, searchParams }: { params: 
   const today = todayIn(ctx.timezone);
   const from = p.start_date ?? addDays(today, -90);
 
-  const [summaryRes, workersRes, machinesRes, teamsRes, sitesRes] = await Promise.all([
+  const [summaryRes, workersRes, machinesRes, teamsRes, sitesRes, contractsRes] = await Promise.all([
     ctx.supabase.rpc("analytics_project_summary", { p_org: ctx.org.id, p_from: from < addDays(today, -365) ? addDays(today, -365) : from, p_to: today }),
     ctx.supabase.from("project_workers").select("id, project_role, assigned_at, employee:employees(id, full_name, job_title, status)").eq("project_id", id).is("unassigned_at", null),
     ctx.supabase.from("project_machines").select("id, assigned_at, machine:machines(id, name, category, status, engine_hours)").eq("project_id", id).is("unassigned_at", null),
     ctx.supabase.from("project_teams").select("team:teams(id, name)").eq("project_id", id),
     ctx.supabase.from("work_sites").select("id, name, site_identifiers, latitude, longitude, area_ha").eq("project_id", id).is("archived_at", null),
+    ctx.can("manage_projects") || ctx.can("view_finance")
+      ? ctx.supabase.from("contracts").select("id, title, number").eq("project_id", id).is("deleted_at", null)
+      : Promise.resolve({ data: [] as { id: string; title: string; number: string | null }[] }),
   ]);
   const s = (summaryRes.data ?? []).find((x) => x.project_id === id);
   const counts = { workers: workersRes.data?.length ?? 0, machines: machinesRes.data?.length ?? 0 };
@@ -57,7 +60,12 @@ export default async function ProjectDetail({ params, searchParams }: { params: 
     <>
       <PageHeader
         back={{ href: "/projects", label: ctx.t("projects.title") }}
-        eyebrow={<><span>{country?.flag}</span><span>{country?.name}</span>{p.is_demo && <DemoBadge />}</>}
+        eyebrow={<><span>{country?.flag}</span><span>{country?.name}</span>{p.is_demo && <DemoBadge />}
+          {(contractsRes.data ?? []).map((k) => (
+            <Link key={k.id} href={`/contracts/${k.id}`} className="inline-flex items-center gap-1 rounded-md border border-line px-1.5 py-0.5 text-[11px] text-ink-2 hover:border-amber/50 hover:text-amber">
+              <FileSignature className="h-3 w-3" /> Līgums{k.number ? ` ${k.number}` : ""}
+            </Link>
+          ))}</>}
         title={p.code}
         subtitle={<>{p.name}{p.client_name ? ` · ${p.client_name}` : ""}</>}
         actions={<>

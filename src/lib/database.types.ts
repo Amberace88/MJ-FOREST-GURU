@@ -249,6 +249,223 @@ export type Database = {
           }
         ]
       }
+      contract_milestones: {
+        Row: {
+          id: string
+          organization_id: string
+          contract_id: string
+          kind: string
+          title: string
+          due_date: string | null
+          amount: number | null
+          done_at: string | null
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          contract_id: string
+          kind?: string
+          title: string
+          due_date?: string | null
+          amount?: number | null
+          done_at?: string | null
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          contract_id?: string
+          kind?: string
+          title?: string
+          due_date?: string | null
+          amount?: number | null
+          done_at?: string | null
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_milestones_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_milestones_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      contracts: {
+        Row: {
+          id: string
+          organization_id: string
+          company_id: string | null
+          country_id: string | null
+          contact_id: string | null
+          lead_id: string | null
+          project_id: string | null
+          number: string | null
+          title: string
+          client_name: string | null
+          work_type: string
+          source: string
+          status: string
+          signed_at: string | null
+          start_date: string | null
+          end_date: string | null
+          notice_date: string | null
+          pricing_model: string
+          unit_price: number | null
+          total_value: number | null
+          currency: string
+          volume_m3: number | null
+          area_ha: number | null
+          payment_terms_days: number | null
+          guarantee: string | null
+          penalties: string | null
+          external_ref: string | null
+          location: string | null
+          notes: string | null
+          responsible_user: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          company_id?: string | null
+          country_id?: string | null
+          contact_id?: string | null
+          lead_id?: string | null
+          project_id?: string | null
+          number?: string | null
+          title: string
+          client_name?: string | null
+          work_type?: string
+          source?: string
+          status?: string
+          signed_at?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          notice_date?: string | null
+          pricing_model?: string
+          unit_price?: number | null
+          total_value?: number | null
+          currency?: string
+          volume_m3?: number | null
+          area_ha?: number | null
+          payment_terms_days?: number | null
+          guarantee?: string | null
+          penalties?: string | null
+          external_ref?: string | null
+          location?: string | null
+          notes?: string | null
+          responsible_user?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          company_id?: string | null
+          country_id?: string | null
+          contact_id?: string | null
+          lead_id?: string | null
+          project_id?: string | null
+          number?: string | null
+          title?: string
+          client_name?: string | null
+          work_type?: string
+          source?: string
+          status?: string
+          signed_at?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          notice_date?: string | null
+          pricing_model?: string
+          unit_price?: number | null
+          total_value?: number | null
+          currency?: string
+          volume_m3?: number | null
+          area_ha?: number | null
+          payment_terms_days?: number | null
+          guarantee?: string | null
+          penalties?: string | null
+          external_ref?: string | null
+          location?: string | null
+          notes?: string | null
+          responsible_user?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "business_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "forest_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       countries: {
         Row: {
           id: string
@@ -3456,6 +3673,117 @@ export type Database = {
             referencedColumns: ["id"]
           }
         ]
+      }
+      tender_notices: {
+        Row: {
+          id: string
+          source: string
+          country: string
+          stage: string
+          notice_type: string | null
+          title: string
+          description: string | null
+          buyer_name: string | null
+          buyer_reg_no: string | null
+          buyer_city: string | null
+          buyer_email: string | null
+          buyer_phone: string | null
+          region: string | null
+          cpv: string | null
+          cpv_extra: string[]
+          category: string
+          score: number
+          nature: string | null
+          procedure: string | null
+          reference: string | null
+          published_on: string | null
+          deadline: string | null
+          duration_months: number | null
+          estimated_value: number | null
+          currency: string | null
+          url: string | null
+          fetched_at: string
+        }
+        Insert: {
+          id: string
+          source: string
+          country: string
+          stage: string
+          notice_type?: string | null
+          title: string
+          description?: string | null
+          buyer_name?: string | null
+          buyer_reg_no?: string | null
+          buyer_city?: string | null
+          buyer_email?: string | null
+          buyer_phone?: string | null
+          region?: string | null
+          cpv?: string | null
+          cpv_extra?: string[]
+          category?: string
+          score?: number
+          nature?: string | null
+          procedure?: string | null
+          reference?: string | null
+          published_on?: string | null
+          deadline?: string | null
+          duration_months?: number | null
+          estimated_value?: number | null
+          currency?: string | null
+          url?: string | null
+          fetched_at?: string
+        }
+        Update: {
+          id?: string
+          source?: string
+          country?: string
+          stage?: string
+          notice_type?: string | null
+          title?: string
+          description?: string | null
+          buyer_name?: string | null
+          buyer_reg_no?: string | null
+          buyer_city?: string | null
+          buyer_email?: string | null
+          buyer_phone?: string | null
+          region?: string | null
+          cpv?: string | null
+          cpv_extra?: string[]
+          category?: string
+          score?: number
+          nature?: string | null
+          procedure?: string | null
+          reference?: string | null
+          published_on?: string | null
+          deadline?: string | null
+          duration_months?: number | null
+          estimated_value?: number | null
+          currency?: string | null
+          url?: string | null
+          fetched_at?: string
+        }
+        Relationships: []
+      }
+      tender_sync_state: {
+        Row: {
+          source: string
+          last_day: string | null
+          last_run_at: string | null
+          last_error: string | null
+        }
+        Insert: {
+          source: string
+          last_day?: string | null
+          last_run_at?: string | null
+          last_error?: string | null
+        }
+        Update: {
+          source?: string
+          last_day?: string | null
+          last_run_at?: string | null
+          last_error?: string | null
+        }
+        Relationships: []
       }
       training_material_acks: {
         Row: {

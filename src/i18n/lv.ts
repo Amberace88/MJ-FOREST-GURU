@@ -150,6 +150,7 @@ export const lv = {
     calculators: "Kalkulatori",
     forestMap: "Meža karte",
     business: "Klienti un darbi",
+    contracts: "Līgumi",
     settings: "Iestatījumi",
     users: "Lietotāji un piekļuves",
     integrations: "Integrācijas",

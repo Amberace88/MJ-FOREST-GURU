@@ -11,7 +11,7 @@ import { getBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 type Kind = "photo" | "video" | "before" | "after" | "receipt" | "document" | "avatar" | "other";
-type EntityType = "employee" | "machine" | "project" | "organization" | "safety_rule" | "repair" | "expense" | "fuel" | "incident" | "task" | "production" | "receipt";
+type EntityType = "employee" | "machine" | "project" | "organization" | "safety_rule" | "repair" | "expense" | "fuel" | "incident" | "task" | "production" | "receipt" | "contract";
 
 const MAX = 50 * 1024 * 1024;
 
