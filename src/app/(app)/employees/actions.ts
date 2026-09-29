@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { dbFail, fail, parseForm, zf, type ActionResult } from "@/lib/actions";
 import { requireOrg } from "@/lib/context";
-import { inviteUser } from "@/lib/invite";
+import { grantableRoles, inviteUser } from "@/lib/invite";
+import { E164, normalizePhone } from "@/lib/phone";
 import { ROLE_KEYS, type RoleKey } from "@/lib/permissions";
 
 const STATUSES = ["active", "on_leave", "inactive", "offboarding"] as const;
@@ -13,8 +14,12 @@ const STATUSES = ["active", "on_leave", "inactive", "offboarding"] as const;
 const employeeSchema = z.object({
   first_name: zf.reqText(100),
   last_name: zf.text(100).optional(),
-  email: zf.email().optional(),
-  phone: zf.text(40).optional(),
+  email: zf.email(),
+  phone: z.string({ error: "Obligāts lauks" }).transform(normalizePhone).pipe(z.string().regex(E164, "Tālrunis ar valsts kodu, piem. +371 26123456")),
+  whatsapp: z.string().transform(normalizePhone).pipe(z.string().regex(E164, "WhatsApp ar valsts kodu, piem. +371 26123456")).optional(),
+  same_whatsapp: z.string().optional(),
+  create_account: z.string().optional(),
+  role_key: z.enum(ROLE_KEYS as unknown as [string, ...string[]]).optional(),
   job_title: zf.text(120).optional(),
   country_id: zf.optUuid(),
   team_id: zf.optUuid(),
@@ -36,8 +41,9 @@ function toRow(d: EmployeeInput) {
   return {
     first_name: d.first_name,
     last_name: d.last_name ?? "",
-    email: d.email?.toLowerCase() ?? null,
-    phone: d.phone ?? null,
+    email: d.email.toLowerCase(),
+    phone: d.phone,
+    whatsapp: d.same_whatsapp === "1" ? d.phone : d.whatsapp ?? null,
     job_title: d.job_title ?? null,
     country_id: d.country_id ?? null,
     team_id: d.team_id ?? null,
@@ -62,6 +68,16 @@ export async function createEmployee(_prev: ActionResult, fd: FormData): Promise
     .select("id").single();
   if (error) return dbFail("employee.create", error);
   revalidatePath("/employees");
+
+  // Account + one-time invitation link right away (the admin shares it by e-mail / WhatsApp / SMS)
+  if (d.create_account === "1" && ctx.can("manage_users")) {
+    const role = (d.role_key ?? "employee") as RoleKey;
+    if (!grantableRoles(ctx).includes(role)) return fail(ctx.t("users.privilegedRole"));
+    const res = await inviteUser({ ctx, email: d.email, fullName: `${d.first_name} ${d.last_name ?? ""}`.trim(), role, employeeId: data.id });
+    if (!res.ok) return { ok: false, error: `Darbinieks saglabāts, bet kontu neizdevās izveidot: ${res.error ?? ""}`.trim() };
+    if (fd.get("_stay") === "1") revalidatePath("/setup");
+    return { ...res, data: res.data ? { ...res.data, to: { email: d.email.toLowerCase(), whatsapp: d.same_whatsapp === "1" ? d.phone : d.whatsapp ?? null, phone: d.phone } } : undefined };
+  }
   if (fd.get("_stay") === "1") { revalidatePath("/setup"); return { ok: true }; } // setup wizard
   redirect(`/employees/${data.id}`);
 }

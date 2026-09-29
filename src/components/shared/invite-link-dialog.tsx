@@ -11,7 +11,8 @@ import { useT } from "@/i18n/client";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type LinkData = { link: string | null; expiresAt: string | null; existing: boolean };
+type Recipient = { email?: string | null; phone?: string | null; whatsapp?: string | null };
+type LinkData = { link: string | null; expiresAt: string | null; existing: boolean; to?: Recipient };
 
 /**
  * Dialog that runs an invite action and then shows the one-time invitation link
@@ -73,7 +74,7 @@ function Body({ action, close, title, description, submitLabel, children }: {
         </button>
       </div>
       {data?.link ? (
-        <LinkPanel link={data.link} expiresAt={data.expiresAt} message={state.ok ? state.message : undefined} onDone={close} />
+        <LinkPanel link={data.link} expiresAt={data.expiresAt} message={state.ok ? state.message : undefined} onDone={close} to={data.to} />
       ) : (
         <form action={formAction} onSubmit={() => setSubmitted(true)}>
           {!state.ok && submitted && (
@@ -99,7 +100,7 @@ function Submit({ children }: { children: ReactNode }) {
   );
 }
 
-export function LinkPanel({ link, expiresAt, message, onDone }: { link: string; expiresAt: string | null; message?: string; onDone?: () => void }) {
+export function LinkPanel({ link, expiresAt, message, onDone, to }: { link: string; expiresAt: string | null; message?: string; onDone?: () => void; to?: Recipient }) {
   const { t } = useT();
   const [copied, setCopied] = useState(false);
   const text = `${t("users.inviteMessage")} ${link}`;
@@ -110,13 +111,17 @@ export function LinkPanel({ link, expiresAt, message, onDone }: { link: string; 
     setCopied(true); toast(t("users.copied")); setTimeout(() => setCopied(false), 2500);
   };
   const share = [
-    { label: t("users.shareWhatsApp"), href: `https://wa.me/?text=${encodeURIComponent(text)}`, Icon: MessageCircle },
-    { label: t("users.shareSms"), href: `sms:?&body=${encodeURIComponent(text)}`, Icon: Smartphone },
-    { label: t("users.shareEmail"), href: `mailto:?subject=${encodeURIComponent("MJ Forest Guru")}&body=${encodeURIComponent(text)}`, Icon: Mail },
+    // straight to the person when their contacts are known
+    { label: t("users.shareWhatsApp"), href: `https://wa.me/${(to?.whatsapp ?? "").replace(/[^\d]/g, "")}?text=${encodeURIComponent(text)}`, Icon: MessageCircle },
+    { label: t("users.shareSms"), href: `sms:${to?.phone ?? ""}?&body=${encodeURIComponent(text)}`, Icon: Smartphone },
+    { label: t("users.shareEmail"), href: `mailto:${to?.email ?? ""}?subject=${encodeURIComponent("Ielūgums — MJ Forest Guru")}&body=${encodeURIComponent(text)}`, Icon: Mail },
   ];
   return (
     <div className="space-y-4 px-5 py-5 animate-fade-up">
       {message && <p className="flex items-center gap-2 text-sm text-ok"><Check className="h-4 w-4" /> {message}</p>}
+      {(to?.email || to?.whatsapp) && (
+        <p className="text-xs text-muted">Nosūtīt: {[to.email, to.whatsapp && `WhatsApp ${to.whatsapp}`].filter(Boolean).join(" · ")}</p>
+      )}
       <div className="rounded-xl border border-amber/30 bg-amber/5 p-3">
         <div className="break-all font-mono text-[13px] leading-relaxed text-ink" data-testid="invite-link">{link}</div>
       </div>

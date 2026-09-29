@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { hasServiceRole } from "@/lib/env.server";
+import { grantableRoles } from "@/lib/invite";
 import { Clock, HardHat, TreePine, Users } from "lucide-react";
 import Link from "next/link";
 import { Badge, DemoBadge } from "@/components/ui/badge";
@@ -80,11 +82,11 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
     <>
       <PageHeader title={ctx.t("employees.title")}
         subtitle={<>{ctx.t("employees.subtitle")}{count != null && <> · <span className="tabular text-ink-2">{count}</span></>}{workingCount > 0 && <> · <span className="text-ok">{ctx.t("employees.working")}: {workingCount}</span></>}</>}
-        actions={canEdit && <NewEmployeeDialog countries={opts.countryOptions} teams={opts.teamOptions} defaultOpen={one(sp.new) === "1"} />} />
+        actions={canEdit && <NewEmployeeDialog countries={opts.countryOptions} teams={opts.teamOptions} defaultOpen={one(sp.new) === "1"} roles={ctx.can("manage_users") && hasServiceRole() ? grantableRoles(ctx).map((r) => ({ value: r, label: ctx.label("users.roleNames", r) })) : undefined} />} />
       <FilterBar filters={filters} />
       {rows.length === 0 ? (
         <EmptyState icon={<Users className="h-6 w-6" />} title={ctx.t("employees.empty")}
-          action={canEdit ? <NewEmployeeDialog countries={opts.countryOptions} teams={opts.teamOptions} /> : undefined} />
+          action={canEdit ? <NewEmployeeDialog countries={opts.countryOptions} teams={opts.teamOptions} roles={ctx.can("manage_users") && hasServiceRole() ? grantableRoles(ctx).map((r) => ({ value: r, label: ctx.label("users.roleNames", r) })) : undefined} /> : undefined} />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {rows.map((e, i) => {

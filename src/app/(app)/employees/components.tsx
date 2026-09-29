@@ -1,9 +1,11 @@
 "use client";
 
 import { InviteLinkDialog } from "@/components/shared/invite-link-dialog";
-import { Banknote, Mail, Pencil, UserPlus } from "lucide-react";
+import { Banknote, Mail, MessageCircle, Pencil, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
+import { DIAL_CODES, normalizePhone, splitPhone } from "@/lib/phone";
+import { cn } from "@/lib/utils";
 import { CompanySelect } from "@/components/shared/company";
 import { FileUploader } from "@/components/shared/file-uploader";
 import { Button } from "@/components/ui/button";
@@ -15,8 +17,62 @@ import { createEmployee, inviteEmployee, saveCompensation, setEmployeePhoto, upd
 export type EmployeeValues = {
   id?: string; first_name?: string; last_name?: string | null; email?: string | null; phone?: string | null; job_title?: string | null;
   country_id?: string | null; team_id?: string | null; status?: string; employment_start?: string | null; employment_end?: string | null; notes?: string | null;
-  company_id?: string | null;
+  company_id?: string | null; whatsapp?: string | null;
 };
+
+/** Country code + number → one hidden E.164 value ("+37126123456"). */
+function PhoneField({ name, label, value, onChange, required, hint }: {
+  name: string; label: string; value: string; onChange: (v: string) => void; required?: boolean; hint?: string;
+}) {
+  const init = splitPhone(value);
+  const [code, setCode] = useState(init.code || "+371");
+  const [local, setLocal] = useState(init.code ? init.local : value);
+  const combined = local.trim().startsWith("+") || local.trim().startsWith("00") ? normalizePhone(local) : local.trim() ? `${code}${normalizePhone(local).replace(/^0+/, "")}` : "";
+  const push = (c: string, l: string) => {
+    const v = l.trim().startsWith("+") || l.trim().startsWith("00") ? normalizePhone(l) : l.trim() ? `${c}${normalizePhone(l).replace(/^0+/, "")}` : "";
+    onChange(v);
+  };
+  return (
+    <div>
+      <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted">{label}{!required && <span className="normal-case tracking-normal text-faint">(neobligāts)</span>}</label>
+      <div className="flex gap-2">
+        <select aria-label="Valsts kods" value={code} onChange={(e) => { setCode(e.target.value); push(e.target.value, local); }} className="field w-[7.5rem] shrink-0">
+          {DIAL_CODES.map((d) => <option key={d.code} value={d.code}>{d.label}</option>)}
+        </select>
+        <input type="tel" inputMode="tel" autoComplete="off" value={local} required={required} placeholder="26 123 456"
+          onChange={(e) => { setLocal(e.target.value); push(code, e.target.value); }} className="field min-w-0 flex-1" aria-label={label} />
+      </div>
+      <input type="hidden" name={name} value={combined} />
+      <p className="mt-1 text-xs text-faint">{combined ? <>Tiks saglabāts: <span className="font-mono text-ink-2">{combined}</span></> : hint ?? "Pilns numurs ar valsts kodu"}</p>
+    </div>
+  );
+}
+
+function ContactFields({ values }: { values?: EmployeeValues }) {
+  const { t } = useT();
+  const [phone, setPhone] = useState(values?.phone ?? "");
+  const [same, setSame] = useState(!values?.whatsapp || normalizePhone(values.whatsapp) === normalizePhone(values?.phone ?? ""));
+  const [wa, setWa] = useState(values?.whatsapp ?? "");
+  return (
+    <div className="space-y-4">
+      <FormGrid>
+        <Input name="email" type="email" label={t("employees.email")} defaultValue={values?.email ?? ""} required maxLength={200} autoComplete="off"
+          hint="Uz šo e-pastu tiek piesaistīts konts un ielūgums" />
+        <PhoneField name="phone" label={t("employees.phone")} value={phone} onChange={setPhone} required />
+      </FormGrid>
+      <div className="rounded-xl border border-line bg-surface-2/40 p-3">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-ink">
+          <input type="checkbox" checked={same} onChange={(e) => setSame(e.target.checked)} className="h-4 w-4 accent-[var(--forest-500)]" />
+          <MessageCircle className="h-4 w-4 text-ok" /> WhatsApp ir tas pats numurs
+          {same && phone && <span className="ml-auto font-mono text-xs text-muted">{phone}</span>}
+        </label>
+        {same ? <input type="hidden" name="same_whatsapp" value="1" /> : (
+          <div className="mt-3 animate-fade-in"><PhoneField name="whatsapp" label="WhatsApp numurs" value={wa} onChange={setWa} /></div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const STATUSES = ["active", "on_leave", "inactive", "offboarding"] as const;
 
@@ -28,10 +84,7 @@ function EmployeeFields({ countries, teams, values }: { countries: Option[]; tea
         <Input name="first_name" label={t("employees.firstName")} defaultValue={values?.first_name} required maxLength={100} autoComplete="off" />
         <Input name="last_name" label={t("employees.lastName")} defaultValue={values?.last_name ?? ""} maxLength={100} autoComplete="off" />
       </FormGrid>
-      <FormGrid>
-        <Input name="email" type="email" label={t("employees.email")} defaultValue={values?.email ?? ""} optional maxLength={200} autoComplete="off" />
-        <Input name="phone" type="tel" label={t("employees.phone")} defaultValue={values?.phone ?? ""} optional maxLength={40} autoComplete="off" />
-      </FormGrid>
+      <ContactFields values={values} />
       <CompanySelect value={values ? (values.company_id ?? null) : undefined} />
       <FormGrid cols={3}>
         <Input name="job_title" label={t("employees.jobTitle")} defaultValue={values?.job_title ?? ""} optional maxLength={120} />
@@ -48,14 +101,33 @@ function EmployeeFields({ countries, teams, values }: { countries: Option[]; tea
   );
 }
 
-export function NewEmployeeDialog({ countries, teams, defaultOpen, stay }: { countries: Option[]; teams: Option[]; defaultOpen?: boolean; stay?: boolean }) {
+export function NewEmployeeDialog({ countries, teams, defaultOpen, stay, roles }: {
+  countries: Option[]; teams: Option[]; defaultOpen?: boolean; stay?: boolean; /** roles the admin may grant → shows "create account" */ roles?: Option[];
+}) {
   const { t } = useT();
   return (
-    <FormDialog size="lg" title={t("employees.new")} action={createEmployee as FormAction} defaultOpen={defaultOpen}
+    <InviteLinkDialog title={t("employees.new")} action={createEmployee as FormAction} defaultOpen={defaultOpen} submitLabel={t("common.save")}
       trigger={<Button><UserPlus className="h-4 w-4" /> {t("employees.new")}</Button>}>
       {stay && <input type="hidden" name="_stay" value="1" />}
       <EmployeeFields countries={countries} teams={teams} />
-    </FormDialog>
+      {roles && roles.length > 0 && <AccountFields roles={roles} />}
+    </InviteLinkDialog>
+  );
+}
+
+function AccountFields({ roles }: { roles: Option[] }) {
+  const [on, setOn] = useState(true);
+  return (
+    <div className={cn("mt-4 rounded-xl border p-4 transition", on ? "border-amber/40 bg-amber/[0.05]" : "border-line")}>
+      <label className="flex cursor-pointer items-start gap-2.5">
+        <input type="checkbox" name="create_account" value="1" checked={on} onChange={(e) => setOn(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--amber)]" />
+        <span>
+          <span className="block text-sm font-medium text-ink">Izveidot kontu platformā un ielūguma saiti</span>
+          <span className="block text-xs text-muted">Pēc saglabāšanas saņemsi saiti, ko ar vienu klikšķi nosūtīt uz darbinieka e-pastu vai WhatsApp. Pirmajā ienākšanā viņš obligāti uzliek savu paroli.</span>
+        </span>
+      </label>
+      {on && <div className="mt-3 animate-fade-in"><Select name="role_key" label="Loma" defaultValue="employee" options={roles} /></div>}
+    </div>
   );
 }
 

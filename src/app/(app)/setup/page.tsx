@@ -110,7 +110,7 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
     const list = step === 2 ? opts.employees.map((e) => ({ id: e.id, name: e.full_name, sub: e.job_title }))
       : step === 3 ? opts.machines.map((m) => ({ id: m.id, name: m.name, sub: ctx.label("machines.categories", m.category) }))
       : opts.projects.map((p) => ({ id: p.id, name: `${p.code} · ${p.name}`, sub: ctx.label("projects.status", p.status) }));
-    summary = step === 2 ? <NewEmployeeDialog countries={opts.countryOptions} teams={opts.teamOptions} stay />
+    summary = step === 2 ? <NewEmployeeDialog countries={opts.countryOptions} teams={opts.teamOptions} stay roles={ctx.can("manage_users") && hasServiceRole() ? grantableRoles(ctx).map((r) => ({ value: r, label: ctx.label("users.roleNames", r) })) : undefined} />
       : step === 3 ? <NewMachineDialog countries={opts.countryOptions} fuelTypes={opts.fuelTypes} stay />
       : <NewProjectDialog countries={ctx.countries} stay />;
     body = list.length ? (

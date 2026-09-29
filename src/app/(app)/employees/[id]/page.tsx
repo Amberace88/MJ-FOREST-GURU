@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Archive, ArchiveRestore, CheckCircle2, Circle, Clock, FileText, GraduationCap, KeyRound, Mail, Phone, Plus, ShieldCheck, TriangleAlert } from "lucide-react";
+import { formatPhone, waLink } from "@/lib/phone";
+import { Archive, ArchiveRestore, CheckCircle2, Circle, Clock, FileText, GraduationCap, KeyRound, Mail, Phone, Plus, ShieldCheck, TriangleAlert, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Activity } from "@/components/shared/activity";
@@ -93,7 +94,7 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
 }
 
 type Emp = {
-  id: string; organization_id: string; user_id: string | null; first_name: string; last_name: string; full_name: string | null; email: string | null; phone: string | null;
+  id: string; organization_id: string; user_id: string | null; first_name: string; last_name: string; full_name: string | null; email: string | null; phone: string | null; whatsapp?: string | null;
   job_title: string | null; status: string; employment_start: string | null; employment_end: string | null; notes: string | null; country_id: string | null; archived_at: string | null;
 };
 type Live = Awaited<ReturnType<typeof liveInfo>> extends Map<string, infer V> ? V : never;
@@ -134,7 +135,8 @@ async function OverviewTab({ ctx, emp, team, info, canEdit }: { ctx: OrgContext;
             <CardBody>
               <DefinitionList items={[
                 { label: ctx.t("employees.email"), value: emp.email ? <a href={`mailto:${emp.email}`} className="inline-flex items-center gap-1.5 hover:text-amber"><Mail className="h-3.5 w-3.5" />{emp.email}</a> : null },
-                { label: ctx.t("employees.phone"), value: emp.phone ? <a href={`tel:${emp.phone.replace(/\s+/g, "")}`} className="inline-flex items-center gap-1.5 hover:text-amber"><Phone className="h-3.5 w-3.5" />{emp.phone}</a> : null },
+                { label: ctx.t("employees.phone"), value: emp.phone ? <a href={`tel:${emp.phone.replace(/\s+/g, "")}`} className="inline-flex items-center gap-1.5 hover:text-amber"><Phone className="h-3.5 w-3.5" />{formatPhone(emp.phone)}</a> : null },
+                { label: "WhatsApp", value: emp.whatsapp ? <a href={waLink(emp.whatsapp)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-ok hover:text-amber"><MessageCircle className="h-3.5 w-3.5" />{formatPhone(emp.whatsapp)}</a> : null },
               ]} />
             </CardBody>
           </Card>
