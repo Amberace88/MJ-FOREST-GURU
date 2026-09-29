@@ -2,7 +2,7 @@
 
 import { Check, Copy, Link2, Loader2, Mail, MessageCircle, Smartphone, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import type { ActionState, FormAction } from "@/components/ui/form";
@@ -25,7 +25,7 @@ export function InviteLinkDialog({ trigger, title, description, action, children
   const [key, setKey] = useState(0);
   const { t } = useT();
   const open = () => { setKey((k) => k + 1); requestAnimationFrame(() => ref.current?.showModal()); };
-  const close = () => ref.current?.close();
+  const close = useCallback(() => ref.current?.close(), []);
   useEffect(() => {
     if (defaultOpen) open();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -33,7 +33,7 @@ export function InviteLinkDialog({ trigger, title, description, action, children
   return (
     <>
       <span className="contents" onClick={open}>{trigger}</span>
-      <dialog ref={ref} className={cn("m-auto w-[calc(100%-1.5rem)] rounded-2xl border border-line-strong bg-surface p-0 text-ink shadow-2xl backdrop:bg-black/60", wide ? "max-w-3xl" : "max-w-xl")}
+      <dialog ref={ref} className={cn("m-auto text-left w-[calc(100%-1.5rem)] rounded-2xl border border-line-strong bg-surface p-0 text-ink shadow-2xl backdrop:bg-black/60", wide ? "max-w-3xl" : "max-w-xl")}
         onClick={(e) => { if (e.target === ref.current) close(); }}>
         {key > 0 && (
           <Body key={key} action={action} close={close} title={title} description={description} submitLabel={submitLabel ?? t("users.createAccount")}>
@@ -52,11 +52,14 @@ function Body({ action, close, title, description, submitLabel, children }: {
   const router = useRouter();
   const [state, formAction] = useActionState(action, { ok: true } as ActionState);
   const [submitted, setSubmitted] = useState(false);
+  const handled = useRef<ActionState | null>(null);
   const data = submitted && state.ok ? (state.data as LinkData | undefined) : undefined;
 
   useEffect(() => {
     if (!submitted) return;
     if (state.ok) {
+      if (handled.current === state) return;
+      handled.current = state;
       router.refresh();
       if (!(state.data as LinkData | undefined)?.link) { toast(state.message ?? t("common.success")); close(); }
     } else toast(state.error, "error");
