@@ -10,7 +10,7 @@ export const lv = {
     subtitleEn: "Private Forestry Operations Platform",
     footer: "People. Machines. Projects. Operations.",
     operationsCenter: "Operations Center",
-    tagline: "Private Operations Manager",
+    tagline: "Management Platform",
     private: "Privāta operāciju platforma",
   },
   common: {

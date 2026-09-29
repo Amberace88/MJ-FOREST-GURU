@@ -11,7 +11,7 @@ export function Logo({ compact, className, subtitle }: { compact?: boolean; clas
           <div className="font-display text-[19px] font-bold uppercase tracking-[0.06em] text-ink">
             MJ <span className="text-ink">Forest</span> <span className="text-moss">Guru</span>
           </div>
-          {subtitle && <div className="mt-1 truncate text-[10px] uppercase tracking-[0.16em] text-muted">{subtitle}</div>}
+          {subtitle && <div className="mt-1 whitespace-nowrap text-[10px] uppercase tracking-[0.18em] text-muted">{subtitle}</div>}
         </div>
       )}
     </div>
