@@ -23,3 +23,9 @@ export const LEAD_WORK_LABEL: Record<LeadWorkType, string> = {
 
 /** Pipeline weight used for the forecast (value × probability; default by stage). */
 export const STAGE_PROBABILITY: Record<LeadStatus, number> = { new: 10, contacted: 20, survey: 40, offer: 60, won: 100, lost: 0 };
+
+/** Whole-unit money for opportunity cards (shared by server pages and client components). */
+export function fmtMoney(v: number | null | undefined, cur = "EUR") {
+  if (v == null) return "—";
+  try { return new Intl.NumberFormat("lv-LV", { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(v); } catch { return `${Math.round(v)} ${cur}`; }
+}

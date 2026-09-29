@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ActionButton, FormDialog, FormGrid, Input, Select, Textarea, type FormAction } from "@/components/ui/form";
 import { toast } from "@/components/ui/toast";
 import {
+  fmtMoney,
   LEAD_SOURCE_LABEL, LEAD_SOURCES, LEAD_STATUS_COLOR, LEAD_STATUS_LABEL, LEAD_STATUSES, LEAD_WORK_LABEL, LEAD_WORK_TYPES,
   STAGE_PROBABILITY, type LeadStatus,
 } from "@/lib/forest/leads";
@@ -26,10 +27,6 @@ export type Opt = { value: string; label: string };
 
 const CURRENCY_BY_COUNTRY: Record<string, string> = { LV: "EUR", SE: "SEK", IS: "ISK" };
 
-export function fmtMoney(v: number | null | undefined, cur = "EUR") {
-  if (v == null) return "—";
-  try { return new Intl.NumberFormat("lv-LV", { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(v); } catch { return `${Math.round(v)} ${cur}`; }
-}
 
 function LeadFields({ lead, countries, companies, point, countryCodes }: {
   lead?: LeadRow; countries: Opt[]; companies: Opt[]; point?: { lat: number; lng: number; countryId?: string | null }; countryCodes: Record<string, string>;

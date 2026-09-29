@@ -4,13 +4,8 @@ import { BookmarkPlus, Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ActionButton, FormDialog, FormGrid, Input, Select, Textarea, type FormAction, type Option } from "@/components/ui/form";
+import { CONTACT_KIND_LABEL, CONTACT_STATUS_LABEL } from "@/lib/business/contacts";
 import { addLeadFrom, createContact, deleteContact, updateContact } from "./actions";
-
-export const CONTACT_KIND_LABEL: Record<string, string> = {
-  client: "Pasūtītājs", buyer: "Kokmateriālu pircējs", forest_owner: "Meža īpašnieks", agency: "Valsts iestāde",
-  contractor: "Partneris / apakšuzņēmējs", association: "Asociācija", portal: "Iepirkumu portāls", other: "Cits",
-};
-export const CONTACT_STATUS_LABEL: Record<string, string> = { prospect: "Potenciāls", contacted: "Sazināts", active: "Aktīvs klients", inactive: "Neaktīvs" };
 
 export type ContactRow = {
   id: string; company_name: string; kind: string; status: string; country_id: string | null; contact_name: string | null; role: string | null;

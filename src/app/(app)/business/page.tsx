@@ -16,9 +16,11 @@ import { fetchTenders, type TenderCountry } from "@/lib/business/ted";
 import { requirePermission } from "@/lib/context";
 import { STAGE_PROBABILITY } from "@/lib/forest/leads";
 import { cn, sp as one } from "@/lib/utils";
-import { fmtMoney, LeadPipeline, NewLeadDialog, type LeadRow } from "../forest-map/lead-components";
+import { LeadPipeline, NewLeadDialog, type LeadRow } from "../forest-map/lead-components";
+import { fmtMoney } from "@/lib/forest/leads";
 import { loadDirectory, refreshTenders } from "./actions";
-import { AddLeadButton, CONTACT_KIND_LABEL, CONTACT_STATUS_LABEL, EditContactDialog, NewContactDialog, type ContactRow } from "./components";
+import { CONTACT_KIND_LABEL, CONTACT_STATUS_LABEL } from "@/lib/business/contacts";
+import { AddLeadButton, EditContactDialog, NewContactDialog, type ContactRow } from "./components";
 
 export const metadata: Metadata = { title: "Klienti un darbi" };
 

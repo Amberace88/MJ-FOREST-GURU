@@ -6,7 +6,8 @@ import { PageHeader, TabNav } from "@/components/ui/misc";
 import { requirePermission } from "@/lib/context";
 import { LEAD_SOURCE_LABEL, LEAD_STATUS_LABEL, STAGE_PROBABILITY, type LeadStatus } from "@/lib/forest/leads";
 import { sp as one } from "@/lib/utils";
-import { fmtMoney, LeadPipeline, NewLeadDialog, type LeadRow } from "./lead-components";
+import { LeadPipeline, NewLeadDialog, type LeadRow } from "./lead-components";
+import { fmtMoney } from "@/lib/forest/leads";
 import { ForestWorkspace } from "./workspace";
 import { OpportunityGuide } from "@/components/business/guide";
 
