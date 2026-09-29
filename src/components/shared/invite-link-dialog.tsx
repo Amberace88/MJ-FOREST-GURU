@@ -10,8 +10,8 @@ import { toast } from "@/components/ui/toast";
 import { useT } from "@/i18n/client";
 import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { clearInviteLink, showInviteLink, useInviteLink, type Recipient } from "./invite-link-store";
 
-type Recipient = { email?: string | null; phone?: string | null; whatsapp?: string | null };
 type LinkData = { link: string | null; expiresAt: string | null; existing: boolean; to?: Recipient; emailed?: boolean };
 
 /**
@@ -53,15 +53,18 @@ function Body({ action, close, title, description, submitLabel, children }: {
   const [state, formAction] = useActionState(action, { ok: true } as ActionState);
   const [submitted, setSubmitted] = useState(false);
   const handled = useRef<ActionState | null>(null);
-  const data = submitted && state.ok ? (state.data as LinkData | undefined) : undefined;
 
   useEffect(() => {
-    if (!submitted) return;
+    if (!submitted || handled.current === state) return;
+    handled.current = state;
     if (state.ok) {
-      if (handled.current === state) return;
-      handled.current = state;
+      const d = state.data as LinkData | undefined;
+      if (d?.link) {
+        // shown by the app-level dialog, which survives the page refresh below
+        showInviteLink({ link: d.link, expiresAt: d.expiresAt, message: state.message, to: d.to, emailed: d.emailed });
+      } else toast(state.message ?? t("common.success"));
+      close();
       router.refresh();
-      if (!(state.data as LinkData | undefined)?.link) { toast(state.message ?? t("common.success")); close(); }
     } else toast(state.error, "error");
   }, [state, submitted, router, close, t]);
 
@@ -69,16 +72,14 @@ function Body({ action, close, title, description, submitLabel, children }: {
     <div>
       <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
         <div>
-          <h2 className="font-display text-xl font-semibold uppercase tracking-wide">{data?.link ? t("users.linkTitle") : title}</h2>
-          {!data?.link && description && <p className="mt-1 text-sm text-muted">{description}</p>}
+          <h2 className="font-display text-xl font-semibold uppercase tracking-wide">{title}</h2>
+          {description && <p className="mt-1 text-sm text-muted">{description}</p>}
         </div>
         <button type="button" onClick={close} className="rounded-lg p-1 text-muted hover:bg-surface-2 hover:text-ink" aria-label={t("common.close")}>
           <X className="h-5 w-5" />
         </button>
       </div>
-      {data?.link ? (
-        <LinkPanel link={data.link} expiresAt={data.expiresAt} message={state.ok ? state.message : undefined} onDone={close} to={data.to} emailed={data.emailed} />
-      ) : (
+      {(
         <form action={formAction} onSubmit={() => setSubmitted(true)}>
           {!state.ok && submitted && (
             <div role="alert" className="mx-5 mt-4 rounded-lg border border-crit/30 bg-crit/10 px-3 py-2 text-sm text-crit">{state.error}</div>
@@ -145,5 +146,34 @@ export function LinkPanel({ link, expiresAt, message, onDone, to, emailed }: { l
       <p className="text-xs text-muted">{t("users.linkHint")}{expiresAt ? ` (${t("users.expires")}: ${fmtDate(expiresAt)})` : ""}</p>
       {onDone && <div className="flex justify-end"><Button variant="ghost" onClick={onDone}>{t("common.close")}</Button></div>}
     </div>
+  );
+}
+
+/** App-level dialog that shows the most recently generated invitation link. Mounted once in the app shell. */
+export function GlobalInviteLinkDialog() {
+  const { t } = useT();
+  const res = useInviteLink();
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (res && !d.open) d.showModal();
+    if (!res && d.open) d.close();
+  }, [res]);
+  return (
+    <dialog ref={ref} onClose={clearInviteLink} onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}
+      className="m-auto w-[calc(100%-1.5rem)] max-w-xl rounded-2xl border border-line-strong bg-surface p-0 text-left text-ink shadow-2xl backdrop:bg-black/60">
+      {res && (
+        <div>
+          <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+            <h2 className="font-display text-xl font-semibold uppercase tracking-wide">{t("users.linkTitle")}</h2>
+            <button type="button" onClick={() => ref.current?.close()} className="rounded-lg p-1 text-muted hover:bg-surface-2 hover:text-ink" aria-label={t("common.close")}>
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <LinkPanel link={res.link} expiresAt={res.expiresAt} message={res.message} onDone={() => ref.current?.close()} to={res.to} emailed={res.emailed} />
+        </div>
+      )}
+    </dialog>
   );
 }

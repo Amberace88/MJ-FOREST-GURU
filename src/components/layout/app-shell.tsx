@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { GlobalInviteLinkDialog } from "@/components/shared/invite-link-dialog";
 import { useEffect, type ReactNode } from "react";
 import { CompaniesProvider } from "@/components/shared/company";
 import { Toaster } from "@/components/ui/toast";
@@ -85,6 +86,7 @@ export function AppShell(props: ShellProps) {
           <MobileNav />
           <CommandMenu open={open} onClose={() => setOpen(false)} perms={props.perms} />
           <Toaster />
+          <GlobalInviteLinkDialog />
         </div>
       </CompaniesProvider>
     </I18nProvider>

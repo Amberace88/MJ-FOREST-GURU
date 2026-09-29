@@ -38,9 +38,8 @@ export async function inviteUserAction(_prev: ActionResult, fd: FormData): Promi
 export async function resendInvitationAction(id: string, _prev: ActionResult, _fd: FormData): Promise<ActionResult> {
   const ctx = await requireOrg();
   if (!uuid.safeParse(id).success) return fail(ctx.t("errors.validation"));
-  const res = await resendInvitation(ctx, id);
-  if (res.ok) revalidatePath(PATH);
-  return res;
+  // no revalidatePath: the dialog refreshes the page itself after showing the link
+  return resendInvitation(ctx, id);
 }
 
 export async function revokeInvitation(id: string, _prev: ActionResult, _fd: FormData): Promise<ActionResult> {
