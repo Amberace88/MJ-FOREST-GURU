@@ -18,8 +18,8 @@ type LinkData = { link: string | null; expiresAt: string | null; existing: boole
  * Dialog that runs an invite action and then shows the one-time invitation link
  * with copy / WhatsApp / SMS / e-mail sharing (no e-mail server needed).
  */
-export function InviteLinkDialog({ trigger, title, description, action, children, submitLabel, defaultOpen }: {
-  trigger: ReactNode; title: ReactNode; description?: ReactNode; action: FormAction; children?: ReactNode; submitLabel?: ReactNode; defaultOpen?: boolean;
+export function InviteLinkDialog({ trigger, title, description, action, children, submitLabel, defaultOpen, wide }: {
+  trigger: ReactNode; title: ReactNode; description?: ReactNode; action: FormAction; children?: ReactNode; submitLabel?: ReactNode; defaultOpen?: boolean; wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [key, setKey] = useState(0);
@@ -33,7 +33,7 @@ export function InviteLinkDialog({ trigger, title, description, action, children
   return (
     <>
       <span className="contents" onClick={open}>{trigger}</span>
-      <dialog ref={ref} className="m-auto w-[calc(100%-1.5rem)] max-w-xl rounded-2xl border border-line-strong bg-surface p-0 text-ink shadow-2xl backdrop:bg-black/60"
+      <dialog ref={ref} className={cn("m-auto w-[calc(100%-1.5rem)] rounded-2xl border border-line-strong bg-surface p-0 text-ink shadow-2xl backdrop:bg-black/60", wide ? "max-w-3xl" : "max-w-xl")}
         onClick={(e) => { if (e.target === ref.current) close(); }}>
         {key > 0 && (
           <Body key={key} action={action} close={close} title={title} description={description} submitLabel={submitLabel ?? t("users.createAccount")}>

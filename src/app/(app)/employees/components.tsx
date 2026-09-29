@@ -106,7 +106,7 @@ export function NewEmployeeDialog({ countries, teams, defaultOpen, stay, roles }
 }) {
   const { t } = useT();
   return (
-    <InviteLinkDialog title={t("employees.new")} action={createEmployee as FormAction} defaultOpen={defaultOpen} submitLabel={t("common.save")}
+    <InviteLinkDialog wide title={t("employees.new")} action={createEmployee as FormAction} defaultOpen={defaultOpen} submitLabel={t("common.save")}
       trigger={<Button><UserPlus className="h-4 w-4" /> {t("employees.new")}</Button>}>
       {stay && <input type="hidden" name="_stay" value="1" />}
       <EmployeeFields countries={countries} teams={teams} />
