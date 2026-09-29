@@ -13,7 +13,7 @@ import { fmtDateTime, fmtRelative } from "@/lib/format";
 import { grantableRoles } from "@/lib/invite";
 import { ROLE_KEYS, type RoleKey } from "@/lib/permissions";
 import { sp as one, statusTone } from "@/lib/utils";
-import { ChangeRoleDialog, InvitationActions, InviteDialog, MemberStatusButton, PermissionMatrix, PreparedAccounts, type MatrixRole } from "./components";
+import { ChangeRoleDialog, InvitationActions, InviteDialog, MemberStatusButton, PermissionMatrix, PreparedAccounts, MemberLinkButton, RemoveMemberButton, type MatrixRole } from "./components";
 
 export const metadata: Metadata = { title: "Lietotāji un piekļuves" };
 
@@ -91,6 +91,9 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
     return "pending";
   };
   const pendingByUser = new Set(invites.filter((i) => i.user_id && invitationStatus(i) === "pending").map((i) => i.user_id as string));
+  // latest not-accepted invitation per user (expired ones can be renewed with a new link)
+  const openInviteByUser = new Map<string, string>();
+  for (const i of invites) if (i.user_id && !i.accepted_at && !i.revoked_at && !openInviteByUser.has(i.user_id)) openInviteByUser.set(i.user_id, i.id);
 
   const rolesByUser = new Map<string, string[]>();
   for (const ur of userRolesRes.data ?? []) {
@@ -167,7 +170,9 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
               {(canPerms || !r.roles.some((k) => k === "owner" || k === "admin")) && (
                 <>
                   <ChangeRoleDialog userId={r.userId} name={r.name} current={r.primaryRole} roles={assignableRoles} />
+                  {r.status === "invited" && openInviteByUser.get(r.userId) && <MemberLinkButton invitationId={openInviteByUser.get(r.userId)!} />}
                   <MemberStatusButton userId={r.userId} disabled={r.status === "disabled"} />
+                  <RemoveMemberButton userId={r.userId} name={r.name} />
                 </>
               )}
             </span>

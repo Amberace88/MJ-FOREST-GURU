@@ -12,7 +12,7 @@ import { requirePermission } from "@/lib/context";
 import { fmtHours } from "@/lib/format";
 import { getOptions } from "@/lib/queries";
 import { likeTerm, searchParamsToString, sp as one, statusTone } from "@/lib/utils";
-import { NewEmployeeDialog } from "./components";
+import { EmployeeCardActions, NewEmployeeDialog } from "./components";
 import { liveInfo, photoUrls } from "./data";
 
 export const metadata: Metadata = { title: "Darbinieki" };
@@ -45,7 +45,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   }
 
   let query = ctx.supabase.from("employees")
-    .select("id, full_name, first_name, last_name, job_title, status, country_id, team_id, photo_path, user_id, is_demo, archived_at, company_id, team:teams!employees_team_fk(id, name)", { count: "exact" })
+    .select("id, full_name, first_name, last_name, job_title, status, country_id, team_id, photo_path, user_id, is_demo, archived_at, company_id, email, phone, whatsapp, employment_start, employment_end, notes, team:teams!employees_team_fk(id, name)", { count: "exact" })
     .eq("organization_id", ctx.org.id).is("deleted_at", null)
     .order("first_name").order("last_name").range((page - 1) * PAGE, page * PAGE - 1);
   if (status === "archived") query = query.not("archived_at", "is", null);
@@ -95,7 +95,14 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
             const teamRel = e.team as { id: string; name: string } | null;
             const co = e.company_id ? ctx.companiesAll.find((x) => x.id === e.company_id) : undefined;
             return (
-              <li key={e.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}>
+              <li key={e.id} className="group relative animate-fade-up" style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}>
+                {canEdit && (
+                  <div className="absolute right-3 top-3 z-10 opacity-100 transition md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                    <EmployeeCardActions countries={opts.countryOptions} teams={opts.teamOptions} name={e.full_name ?? ""} archived={Boolean(e.archived_at)}
+                      values={{ id: e.id, first_name: e.first_name, last_name: e.last_name, email: e.email, phone: e.phone, whatsapp: e.whatsapp, job_title: e.job_title,
+                        country_id: e.country_id, team_id: e.team_id, status: e.status, employment_start: e.employment_start, employment_end: e.employment_end, notes: e.notes, company_id: e.company_id }} />
+                  </div>
+                )}
                 <Link href={`/employees/${e.id}`} className="card card-hover block h-full p-4">
                   <div className="flex items-start gap-3">
                     <div className="relative">

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { formatPhone, waLink } from "@/lib/phone";
-import { Archive, ArchiveRestore, CheckCircle2, Circle, Clock, FileText, GraduationCap, KeyRound, Mail, Phone, Plus, ShieldCheck, TriangleAlert, MessageCircle } from "lucide-react";
+import { Archive, ArchiveRestore, CheckCircle2, Circle, Clock, FileText, GraduationCap, KeyRound, Mail, Phone, Plus, ShieldCheck, TriangleAlert, MessageCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Activity } from "@/components/shared/activity";
@@ -19,7 +19,7 @@ import { grantableRoles } from "@/lib/invite";
 import { getOptions } from "@/lib/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { statusTone } from "@/lib/utils";
-import { archiveEmployee, restoreEmployee } from "../actions";
+import { archiveEmployee, deleteEmployee, restoreEmployee } from "../actions";
 import { CompensationDialog, EditEmployeeDialog, InviteDialog, PhotoUploader } from "../components";
 import { liveInfo, photoUrls } from "../data";
 
@@ -69,6 +69,9 @@ export default async function EmployeeDetail({ params, searchParams }: { params:
           {canEdit && opts && <EditEmployeeDialog countries={opts.countryOptions} teams={opts.teamOptions} values={{ ...e, id }} />}
           {canEdit && !e.archived_at && (
             <ActionButton action={archiveEmployee.bind(null, id)} variant="ghost" confirm={ctx.t("employees.archiveConfirm")}><Archive className="h-4 w-4" /> {ctx.t("common.archive")}</ActionButton>
+          )}
+          {canEdit && (
+            <ActionButton action={deleteEmployee.bind(null, id)} fields={{ _redirect: "1" }} variant="ghost" className="text-crit hover:text-crit" confirm="Dzēst šo darbinieku? Viņš pazudīs no sarakstiem un zaudēs piekļuvi platformai; vēsture paliks."><Trash2 className="h-4 w-4" /> Dzēst</ActionButton>
           )}
           {canEdit && e.archived_at && (
             <ActionButton action={restoreEmployee.bind(null, id)} variant="secondary"><ArchiveRestore className="h-4 w-4" /> {ctx.t("common.restore")}</ActionButton>

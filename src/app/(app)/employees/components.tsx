@@ -1,7 +1,7 @@
 "use client";
 
 import { InviteLinkDialog } from "@/components/shared/invite-link-dialog";
-import { Banknote, Mail, MessageCircle, Pencil, UserPlus } from "lucide-react";
+import { Archive, ArchiveRestore, Banknote, Mail, MessageCircle, Pencil, Trash2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { DIAL_CODES, normalizePhone, splitPhone } from "@/lib/phone";
@@ -9,10 +9,10 @@ import { cn } from "@/lib/utils";
 import { CompanySelect } from "@/components/shared/company";
 import { FileUploader } from "@/components/shared/file-uploader";
 import { Button } from "@/components/ui/button";
-import { FormDialog, FormGrid, Input, Select, Textarea, type FormAction, type Option } from "@/components/ui/form";
+import { ActionButton, FormDialog, FormGrid, Input, Select, Textarea, type FormAction, type Option } from "@/components/ui/form";
 import { toast } from "@/components/ui/toast";
 import { useT } from "@/i18n/client";
-import { createEmployee, inviteEmployee, saveCompensation, setEmployeePhoto, updateEmployee } from "./actions";
+import { createEmployee, deleteEmployee, setEmployeeArchived, inviteEmployee, saveCompensation, setEmployeePhoto, updateEmployee } from "./actions";
 
 export type EmployeeValues = {
   id?: string; first_name?: string; last_name?: string | null; email?: string | null; phone?: string | null; job_title?: string | null;
@@ -131,11 +131,13 @@ function AccountFields({ roles }: { roles: Option[] }) {
   );
 }
 
-export function EditEmployeeDialog({ countries, teams, values }: { countries: Option[]; teams: Option[]; values: EmployeeValues & { id: string } }) {
+export function EditEmployeeDialog({ countries, teams, values, iconOnly }: { countries: Option[]; teams: Option[]; values: EmployeeValues & { id: string }; iconOnly?: boolean }) {
   const { t } = useT();
   return (
     <FormDialog size="lg" title={`${t("common.edit")}: ${values.first_name ?? ""} ${values.last_name ?? ""}`.trim()} action={updateEmployee.bind(null, values.id) as FormAction}
-      trigger={<Button variant="secondary"><Pencil className="h-4 w-4" /> {t("common.edit")}</Button>}>
+      trigger={iconOnly
+        ? <Button size="sm" variant="ghost" aria-label={t("common.edit")} title={t("common.edit")}><Pencil className="h-4 w-4" /></Button>
+        : <Button variant="secondary"><Pencil className="h-4 w-4" /> {t("common.edit")}</Button>}>
       <EmployeeFields countries={countries} teams={teams} values={values} />
     </FormDialog>
   );
@@ -191,6 +193,25 @@ export function PhotoUploader({ orgId, employeeId }: { orgId: string; employeeId
             router.refresh();
           });
         }} />
+    </div>
+  );
+}
+
+/** Quick actions on an employee card: edit · archive/restore · delete. */
+export function EmployeeCardActions({ countries, teams, values, archived, name }: {
+  countries: Option[]; teams: Option[]; values: EmployeeValues & { id: string }; archived: boolean; name: string;
+}) {
+  return (
+    <div className="flex items-center gap-0.5 rounded-lg border border-line bg-surface/95 p-0.5 shadow-lg backdrop-blur">
+      <EditEmployeeDialog countries={countries} teams={teams} values={values} iconOnly />
+      <ActionButton action={setEmployeeArchived.bind(null, values.id, !archived) as FormAction} variant="ghost" size="sm"
+        confirm={archived ? undefined : `Arhivēt ${name}? Vēsture tiks saglabāta, darbinieks vairs nebūs aktīvajā sarakstā.`}>
+        {archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+      </ActionButton>
+      <ActionButton action={deleteEmployee.bind(null, values.id) as FormAction} variant="ghost" size="sm" className="text-muted hover:text-crit"
+        confirm={`Dzēst ${name}? Darbinieks pazudīs no sarakstiem un zaudēs piekļuvi platformai. Stundas un atskaites vēsturē paliks.`}>
+        <Trash2 className="h-4 w-4" />
+      </ActionButton>
     </div>
   );
 }

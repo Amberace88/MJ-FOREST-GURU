@@ -119,6 +119,40 @@ export async function restoreEmployee(id: string, _prev: ActionResult, _fd: Form
   return { ok: true };
 }
 
+/** Soft delete (kept for history/audit, hidden everywhere) + the person loses platform access. */
+export async function deleteEmployee(id: string, _prev: ActionResult, fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("edit_employees")) return fail(ctx.t("errors.permission"));
+  const { data: emp } = await ctx.supabase.from("employees").select("id, user_id").eq("id", id).eq("organization_id", ctx.org.id).maybeSingle();
+  if (!emp) return fail(ctx.t("errors.notFound"));
+  if (emp.user_id === ctx.user.id) return fail(ctx.t("users.cannotEditSelf"));
+  const { error } = await ctx.supabase.from("employees")
+    .update({ deleted_at: new Date().toISOString(), status: "inactive" }).eq("id", id).eq("organization_id", ctx.org.id);
+  if (error) return dbFail("employee.delete", error);
+  if (emp.user_id && ctx.can("manage_users")) {
+    await ctx.supabase.from("organization_members").update({ status: "disabled" }).eq("organization_id", ctx.org.id).eq("user_id", emp.user_id);
+    await ctx.supabase.from("invitations").update({ revoked_at: new Date().toISOString() })
+      .eq("organization_id", ctx.org.id).eq("user_id", emp.user_id).is("accepted_at", null).is("revoked_at", null);
+  }
+  revalidatePath("/employees");
+  revalidatePath("/settings/users");
+  if (fd.get("_redirect") === "1") redirect("/employees");
+  return { ok: true, message: "Darbinieks dzēsts" };
+}
+
+/** Archive/restore without leaving the list. */
+export async function setEmployeeArchived(id: string, archived: boolean, _prev: ActionResult, _fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("edit_employees")) return fail(ctx.t("errors.permission"));
+  const { error } = await ctx.supabase.from("employees")
+    .update(archived ? { archived_at: new Date().toISOString(), status: "inactive" } : { archived_at: null, status: "active" })
+    .eq("id", id).eq("organization_id", ctx.org.id);
+  if (error) return dbFail("employee.archive", error);
+  revalidatePath("/employees");
+  revalidatePath(`/employees/${id}`);
+  return { ok: true, message: archived ? "Darbinieks arhivēts" : "Darbinieks atjaunots" };
+}
+
 const compensationSchema = z.object({
   hourly_rate: zf.optNum(0, 100000),
   monthly_salary: zf.optNum(0, 10000000),

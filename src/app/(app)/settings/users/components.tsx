@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Lock, MailPlus, RotateCw, ShieldOff, ShieldCheck, Trash2, UserCog, UserPlus, UserRoundPlus, X } from "lucide-react";
+import { Check, Link2, Lock, MailPlus, RotateCw, ShieldOff, ShieldCheck, Trash2, UserCog, UserPlus, UserRoundPlus, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ActionButton, FormDialog, FormGrid, Input, Select, type FormAction } from "@/components/ui/form";
@@ -11,7 +11,7 @@ import { PERMISSION_GROUPS, type RoleKey } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/misc";
 import { Badge } from "@/components/ui/badge";
-import { activatePreparedAction, changeMemberRole, inviteUserAction, prepareAccountAction, removePreparedAction, resendInvitationAction, revokeInvitation, setMemberStatus, setRolePermission } from "./actions";
+import { removeMember, activatePreparedAction, changeMemberRole, inviteUserAction, prepareAccountAction, removePreparedAction, resendInvitationAction, revokeInvitation, setMemberStatus, setRolePermission } from "./actions";
 
 /* ------------------------------------------------------------ invite */
 
@@ -150,6 +150,25 @@ export function MemberStatusButton({ userId, disabled }: { userId: string; disab
     <ActionButton action={setMemberStatus.bind(null, userId, "disabled") as FormAction} variant="ghost" size="sm" confirm={t("users.confirmDisable")}
       className="text-crit hover:text-crit">
       <ShieldOff className="h-4 w-4" /><span className="hidden lg:inline">{t("users.disable")}</span>
+    </ActionButton>
+  );
+}
+
+/** Invited (not yet signed in) → get a fresh link to copy/share; anyone → remove access. */
+export function MemberLinkButton({ invitationId }: { invitationId: string }) {
+  const { t } = useT();
+  return (
+    <InviteLinkDialog title="Ielūguma saite" description="Tiks izveidota jauna vienreizēja saite (vecā vairs nedarbosies). Nokopē vai nosūti to darbiniekam."
+      action={resendInvitationAction.bind(null, invitationId) as FormAction} submitLabel={t("users.newLink")}
+      trigger={<Button size="sm" variant="ghost"><Link2 className="h-4 w-4" /><span className="hidden lg:inline">Saite</span></Button>} />
+  );
+}
+
+export function RemoveMemberButton({ userId, name }: { userId: string; name: string }) {
+  return (
+    <ActionButton action={removeMember.bind(null, userId) as FormAction} variant="ghost" size="sm" className="text-crit hover:text-crit"
+      confirm={`Noņemt ${name} piekļuvi platformai? Konts tiks atvienots no uzņēmuma; darbinieka kartīte un vēsture paliks.`}>
+      <Trash2 className="h-4 w-4" /><span className="hidden lg:inline">Noņemt</span>
     </ActionButton>
   );
 }

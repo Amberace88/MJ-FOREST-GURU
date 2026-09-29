@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { dbFail, fail, parseForm, zf, type ActionResult } from "@/lib/actions";
 import { requireOrg } from "@/lib/context";
+import { hasServiceRole } from "@/lib/env.server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { grantableRoles, inviteUser, resendInvitation } from "@/lib/invite";
 import { PERMISSIONS, ROLE_KEYS, type RoleKey } from "@/lib/permissions";
 
@@ -191,6 +193,40 @@ export async function setMemberStatus(userId: string, status: "active" | "disabl
   if (error) return dbFail("users.status", error);
   revalidatePath(PATH);
   return { ok: true, message: status === "disabled" ? ctx.t("users.disabled") : ctx.t("users.enabled") };
+}
+
+/* ------------------------------------------------------------ remove user from the organization */
+/**
+ * Removes a person's access to this organization: membership, roles and open invitations.
+ * The employee card stays (history), only unlinked. If the account never signed in and
+ * belongs to no other organization, the login itself is deleted too (a mistyped invite).
+ */
+export async function removeMember(userId: string, _prev: ActionResult, _fd: FormData): Promise<ActionResult> {
+  const ctx = await requireOrg();
+  if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
+  if (!uuid.safeParse(userId).success) return fail(ctx.t("errors.validation"));
+  if (userId === ctx.user.id) return fail(ctx.t("users.cannotEditSelf"));
+  if (!hasServiceRole()) return fail(ctx.t("users.serviceKeyMissing"));
+  const current = await rolesOf(ctx, userId);
+  if (current.some((r) => PRIVILEGED.includes(r.key)) && !ctx.can("manage_permissions")) return fail(ctx.t("users.privilegedRole"));
+  if (current.some((r) => r.key === "owner") && (await activeOwnerCount(ctx, userId)) === 0) return fail(ctx.t("errors.lastOwner"));
+
+  const admin = createAdminClient();
+  const { data: target } = await admin.auth.admin.getUserById(userId);
+  if (target.user?.app_metadata?.platform_role === "developer") return fail(ctx.t("errors.permission"));
+  const org = ctx.org.id;
+  const now = new Date().toISOString();
+  await admin.from("invitations").update({ revoked_at: now }).eq("organization_id", org).eq("user_id", userId).is("accepted_at", null).is("revoked_at", null);
+  await admin.from("user_roles").delete().eq("organization_id", org).eq("user_id", userId);
+  const { error } = await admin.from("organization_members").delete().eq("organization_id", org).eq("user_id", userId);
+  if (error) return dbFail("users.remove", error);
+  await admin.from("employees").update({ user_id: null }).eq("organization_id", org).eq("user_id", userId);
+
+  const { count } = await admin.from("organization_members").select("user_id", { count: "exact", head: true }).eq("user_id", userId);
+  if (!count && !target.user?.last_sign_in_at) await admin.auth.admin.deleteUser(userId).catch(() => undefined);
+  revalidatePath(PATH);
+  revalidatePath("/employees");
+  return { ok: true, message: "Lietotājs noņemts" };
 }
 
 /* ------------------------------------------------------------ permission matrix */

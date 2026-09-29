@@ -12,7 +12,7 @@ import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type Recipient = { email?: string | null; phone?: string | null; whatsapp?: string | null };
-type LinkData = { link: string | null; expiresAt: string | null; existing: boolean; to?: Recipient };
+type LinkData = { link: string | null; expiresAt: string | null; existing: boolean; to?: Recipient; emailed?: boolean };
 
 /**
  * Dialog that runs an invite action and then shows the one-time invitation link
@@ -74,7 +74,7 @@ function Body({ action, close, title, description, submitLabel, children }: {
         </button>
       </div>
       {data?.link ? (
-        <LinkPanel link={data.link} expiresAt={data.expiresAt} message={state.ok ? state.message : undefined} onDone={close} to={data.to} />
+        <LinkPanel link={data.link} expiresAt={data.expiresAt} message={state.ok ? state.message : undefined} onDone={close} to={data.to} emailed={data.emailed} />
       ) : (
         <form action={formAction} onSubmit={() => setSubmitted(true)}>
           {!state.ok && submitted && (
@@ -100,7 +100,7 @@ function Submit({ children }: { children: ReactNode }) {
   );
 }
 
-export function LinkPanel({ link, expiresAt, message, onDone, to }: { link: string; expiresAt: string | null; message?: string; onDone?: () => void; to?: Recipient }) {
+export function LinkPanel({ link, expiresAt, message, onDone, to, emailed }: { link: string; expiresAt: string | null; message?: string; onDone?: () => void; to?: Recipient; emailed?: boolean }) {
   const { t } = useT();
   const [copied, setCopied] = useState(false);
   const text = `${t("users.inviteMessage")} ${link}`;
@@ -119,9 +119,12 @@ export function LinkPanel({ link, expiresAt, message, onDone, to }: { link: stri
   return (
     <div className="space-y-4 px-5 py-5 animate-fade-up">
       {message && <p className="flex items-center gap-2 text-sm text-ok"><Check className="h-4 w-4" /> {message}</p>}
-      {(to?.email || to?.whatsapp) && (
-        <p className="text-xs text-muted">Nosūtīt: {[to.email, to.whatsapp && `WhatsApp ${to.whatsapp}`].filter(Boolean).join(" · ")}</p>
+      {emailed === false && (
+        <p className="rounded-lg border border-warn/30 bg-warn/10 px-3 py-2 text-xs leading-relaxed text-warn">
+          Automātiskā e-pasta sūtīšana vēl nav pieslēgta — sistēma pati e-pastu nesūta. Nokopē saiti vai nosūti to ar pogām zemāk{to?.email ? ` (${to.email})` : ""}.
+        </p>
       )}
+      {!emailed && to?.whatsapp && <p className="text-xs text-muted">WhatsApp: {to.whatsapp}</p>}
       <div className="rounded-xl border border-amber/30 bg-amber/5 p-3">
         <div className="break-all font-mono text-[13px] leading-relaxed text-ink" data-testid="invite-link">{link}</div>
       </div>

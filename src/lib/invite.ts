@@ -6,6 +6,8 @@ import type { OrgContext } from "@/lib/context";
 import { appBaseUrl } from "@/lib/env";
 import { hasServiceRole } from "@/lib/env.server";
 import { logServerError } from "@/lib/errors";
+import { fmtDate } from "@/lib/format";
+import { sendInviteEmail } from "@/lib/mail";
 import { INVITABLE_ROLES, type RoleKey } from "@/lib/permissions";
 import { rateLimit } from "@/lib/rate-limit";
 import { requestMeta } from "@/lib/request";
@@ -23,7 +25,7 @@ export type InviteInput = {
   employeeId?: string | null;
 };
 
-export type InviteResult = { userId: string; link: string | null; expiresAt: string | null; existing: boolean };
+export type InviteResult = { userId: string; link: string | null; expiresAt: string | null; existing: boolean; emailed?: boolean; to?: { email?: string | null } };
 
 export const hashInviteToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
@@ -137,10 +139,12 @@ export async function inviteUser({ ctx, email, fullName, role, employeeId }: Inv
     return fail(ctx.t("errors.generic"));
   }
 
+  const link = tok ? await linkFor(tok.token) : null;
+  const emailed = link ? await sendInviteEmail({ to: mail, name, link, orgName: ctx.org.name, invitedBy: ctx.profile?.full_name ?? null, expires: fmtDate(expiresAt) }) : false;
   return {
     ok: true,
-    message: createdNow ? ctx.t("users.linkReady") : ctx.t("users.addedExisting"),
-    data: { userId, link: tok ? await linkFor(tok.token) : null, expiresAt: tok ? expiresAt : null, existing: !createdNow },
+    message: !createdNow ? ctx.t("users.addedExisting") : emailed ? `Konts izveidots un ielūgums nosūtīts uz ${mail}` : ctx.t("users.linkReady"),
+    data: { userId, link, expiresAt: tok ? expiresAt : null, existing: !createdNow, emailed, to: { email: mail } },
   };
 }
 
@@ -152,7 +156,7 @@ export async function regenerateInvitation(ctx: OrgContext, invitationId: string
   if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
   if (!hasServiceRole()) return fail(ctx.t("users.serviceKeyMissing"));
   const admin = createAdminClient();
-  const { data: inv } = await admin.from("invitations").select("id, user_id, accepted_at, revoked_at")
+  const { data: inv } = await admin.from("invitations").select("id, user_id, email, accepted_at, revoked_at")
     .eq("id", invitationId).eq("organization_id", ctx.org.id).maybeSingle();
   if (!inv || inv.accepted_at || inv.revoked_at || !inv.user_id) return fail(ctx.t("errors.notFound"));
 
@@ -165,7 +169,13 @@ export async function regenerateInvitation(ctx: OrgContext, invitationId: string
   }
   const { data: u } = await admin.auth.admin.getUserById(inv.user_id);
   await admin.auth.admin.updateUserById(inv.user_id, { app_metadata: { ...(u.user?.app_metadata ?? {}), must_change_password: true } });
-  return { ok: true, message: ctx.t("users.linkReady"), data: { userId: inv.user_id, link: await linkFor(tok.token), expiresAt, existing: false } };
+  const link = await linkFor(tok.token);
+  const name = (u.user?.user_metadata?.full_name as string | undefined) ?? inv.email ?? "";
+  const emailed = inv.email ? await sendInviteEmail({ to: inv.email, name, link, orgName: ctx.org.name, invitedBy: ctx.profile?.full_name ?? null, expires: fmtDate(expiresAt) }) : false;
+  return {
+    ok: true, message: emailed ? `Jauna saite nosūtīta uz ${inv.email}` : ctx.t("users.linkReady"),
+    data: { userId: inv.user_id, link, expiresAt, existing: false, emailed, to: { email: inv.email } },
+  };
 }
 
 /** Backwards-compatible name used by older call sites. */
