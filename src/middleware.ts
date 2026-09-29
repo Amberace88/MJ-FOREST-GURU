@@ -57,6 +57,17 @@ export async function middleware(request: NextRequest) {
     return withHeaders(NextResponse.redirect(login));
   }
 
+  // login frozen by the platform developer → end the open session right away
+  if (user && user.app_metadata?.login_frozen === true && user.app_metadata?.platform_role !== "developer" && !pathname.startsWith("/auth/")) {
+    await supabase.auth.signOut({ scope: "local" });
+    if (pathname.startsWith("/api/")) return withHeaders(NextResponse.json({ ok: false, error: "frozen" }, { status: 403 }));
+    const login = new URL("/login", request.url);
+    login.searchParams.set("frozen", "1");
+    const res = NextResponse.redirect(login);
+    response.cookies.getAll().forEach((c) => res.cookies.set(c));
+    return withHeaders(res);
+  }
+
   if (user && pathname === "/login") {
     return withHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
   }

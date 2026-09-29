@@ -54,7 +54,7 @@ function Alert({ state }: { state: ActionResult }) {
   );
 }
 
-export function LoginForm({ next, expired, notConfigured, linkError }: { next?: string; expired?: boolean; notConfigured?: boolean; linkError?: string }) {
+export function LoginForm({ next, expired, notConfigured, linkError, frozen }: { next?: string; expired?: boolean; notConfigured?: boolean; linkError?: string; frozen?: boolean }) {
   const { t } = useT();
   const [state, action] = useActionState(loginAction, { ok: true } as ActionResult);
   const redirecting = useHardRedirect(state);
@@ -74,7 +74,8 @@ export function LoginForm({ next, expired, notConfigured, linkError }: { next?: 
           {linkError === "invite" ? t("auth.inviteInvalid") : linkError === "rate" ? t("auth.tooManyAttempts") : t("auth.linkInvalid")}
         </div>
       )}
-      {expired && <div role="status" className="rounded-xl border border-warn/30 bg-warn/10 px-3.5 py-2.5 text-sm text-warn">{t("auth.sessionExpired")}</div>}
+      {frozen && <div role="alert" className="rounded-xl border border-crit/30 bg-crit/10 px-3.5 py-2.5 text-sm text-crit">Piekļuve šim kontam uz laiku ir apturēta. Sazinieties ar platformas administratoru.</div>}
+      {expired && !frozen && <div role="status" className="rounded-xl border border-warn/30 bg-warn/10 px-3.5 py-2.5 text-sm text-warn">{t("auth.sessionExpired")}</div>}
       {notConfigured && <div role="alert" className="rounded-xl border border-crit/30 bg-crit/10 px-3.5 py-2.5 text-sm text-crit">{t("errors.notConfigured")}</div>}
       <Alert state={state} />
       <input type="hidden" name="next" value={next ?? ""} />

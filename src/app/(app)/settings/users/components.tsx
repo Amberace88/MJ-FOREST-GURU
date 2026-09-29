@@ -11,7 +11,7 @@ import { PERMISSION_GROUPS, type RoleKey } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/misc";
 import { Badge } from "@/components/ui/badge";
-import { removeMember, activatePreparedAction, changeMemberRole, inviteUserAction, prepareAccountAction, removePreparedAction, resendInvitationAction, revokeInvitation, setMemberStatus, setRolePermission } from "./actions";
+import { removeMember, setAllFrozenAction, setLoginFrozenAction, activatePreparedAction, changeMemberRole, inviteUserAction, prepareAccountAction, removePreparedAction, resendInvitationAction, revokeInvitation, setMemberStatus, setRolePermission } from "./actions";
 
 /* ------------------------------------------------------------ invite */
 
@@ -292,5 +292,44 @@ function PermissionGroupRows({ groupKey, perms, roles, state, busy, editable, on
         </tr>
       ))}
     </>
+  );
+}
+
+/* ------------------------------------------------------------ login freeze (developer only) */
+
+/** Checkbox on a user row: while checked, this e-mail cannot sign in. */
+export function FreezeToggle({ userId, frozen, name }: { userId: string; frozen: boolean; name: string }) {
+  const [on, setOn] = useState(frozen);
+  const [pending, startTransition] = useTransition();
+  const toggle = () => {
+    const next = !on;
+    setOn(next);
+    startTransition(async () => {
+      const res = await setLoginFrozenAction(userId, next);
+      if (!res.ok) { setOn(!next); toast(res.error, "error"); }
+      else toast(res.message ?? (next ? "Iesaldēts" : "Atjaunots"));
+    });
+  };
+  return (
+    <label className={cn("inline-flex cursor-pointer select-none items-center gap-2 rounded-lg border px-2 py-1 text-xs transition",
+      on ? "border-crit/40 bg-crit/10 text-crit" : "border-line text-muted hover:text-ink", pending && "opacity-60")}
+      title={on ? `${name} nevar ieiet platformā` : "Iesaldēt pieteikšanos"}>
+      <input type="checkbox" className="h-4 w-4 accent-[var(--crit)]" checked={on} onChange={toggle} disabled={pending} aria-label={`Iesaldēt pieteikšanos: ${name}`} />
+      <Lock className="h-3.5 w-3.5" /> {on ? "Iesaldēts" : "Iesaldēt"}
+    </label>
+  );
+}
+
+export function FreezeAllButtons() {
+  return (
+    <span className="inline-flex flex-wrap gap-2">
+      <ActionButton action={setAllFrozenAction.bind(null, true) as FormAction} variant="secondary" size="sm" className="text-crit"
+        confirm="Iesaldēt pieteikšanos visiem lietotājiem, izņemot tevi? Viņi nevarēs ieiet, līdz atsaldēsi.">
+        <Lock className="h-4 w-4" /> Iesaldēt visus, izņemot mani
+      </ActionButton>
+      <ActionButton action={setAllFrozenAction.bind(null, false) as FormAction} variant="ghost" size="sm" confirm="Atjaunot pieteikšanos visiem lietotājiem?">
+        Atsaldēt visus
+      </ActionButton>
+    </span>
   );
 }

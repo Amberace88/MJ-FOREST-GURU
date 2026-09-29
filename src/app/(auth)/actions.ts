@@ -55,7 +55,13 @@ export async function loginAction(_prev: ActionResult, fd: FormData): Promise<Ac
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data: signed, error } = await supabase.auth.signInWithPassword({ email, password });
+  const frozen = error?.code === "user_banned" || (signed?.user?.app_metadata?.login_frozen === true && signed.user.app_metadata?.platform_role !== "developer");
+  if (frozen) {
+    if (!error) await supabase.auth.signOut({ scope: "local" });
+    await auditFailedLogin(email, ip, userAgent, "frozen");
+    return { ok: false, error: "Piekļuve šim kontam uz laiku ir apturēta. Sazinieties ar platformas administratoru." };
+  }
   if (error) {
     await auditFailedLogin(email, ip, userAgent, error.status === 429 ? "rate_limited" : "invalid_credentials");
     return { ok: false, error: error.status === 429 ? t("auth.tooManyAttempts") : t("auth.invalidCredentials") };

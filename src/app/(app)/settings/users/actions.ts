@@ -6,6 +6,7 @@ import { dbFail, fail, parseForm, zf, type ActionResult } from "@/lib/actions";
 import { requireOrg } from "@/lib/context";
 import { hasServiceRole } from "@/lib/env.server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isDeveloper, setLoginFrozen } from "@/lib/login-freeze";
 import { grantableRoles, inviteUser, resendInvitation } from "@/lib/invite";
 import { PERMISSIONS, ROLE_KEYS, type RoleKey } from "@/lib/permissions";
 
@@ -145,6 +146,10 @@ export async function changeMemberRole(userId: string, _prev: ActionResult, fd: 
   if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
   if (!uuid.safeParse(userId).success) return fail(ctx.t("errors.validation"));
   if (userId === ctx.user.id) return fail(ctx.t("users.cannotEditSelf"));
+  if (!isDeveloper(ctx.user) && hasServiceRole()) {
+    const { data: tu } = await createAdminClient().auth.admin.getUserById(userId);
+    if (isDeveloper(tu.user)) return fail(ctx.t("errors.permission"));
+  }
   const parsed = parseForm(z.object({ role: z.enum(ROLE_KEYS) }), fd);
   if (!parsed.ok) return parsed.result;
   const roleKey = parsed.data.role;
@@ -181,6 +186,10 @@ export async function setMemberStatus(userId: string, status: "active" | "disabl
   if (!ctx.can("manage_users")) return fail(ctx.t("errors.permission"));
   if (!uuid.safeParse(userId).success || !["active", "disabled"].includes(status)) return fail(ctx.t("errors.validation"));
   if (userId === ctx.user.id) return fail(ctx.t("users.cannotEditSelf"));
+  if (!isDeveloper(ctx.user) && hasServiceRole()) {
+    const { data: tu } = await createAdminClient().auth.admin.getUserById(userId);
+    if (isDeveloper(tu.user)) return fail(ctx.t("errors.permission"));
+  }
 
   const current = await rolesOf(ctx, userId);
   if (current.some((r) => PRIVILEGED.includes(r.key)) && !ctx.can("manage_permissions")) return fail(ctx.t("users.privilegedRole"));
@@ -249,4 +258,41 @@ export async function setRolePermission(roleId: string, permission: string, enab
   }
   revalidatePath(PATH);
   return { ok: true };
+}
+
+/* ------------------------------------------------------------ login freeze (platform developer only) */
+async function developerGuard() {
+  const ctx = await requireOrg();
+  if (!isDeveloper(ctx.user)) return { ctx, error: fail("Tikai lapas izstrādātājs var iesaldēt pieteikšanos") };
+  if (!hasServiceRole()) return { ctx, error: fail(ctx.t("users.serviceKeyMissing")) };
+  return { ctx, error: null };
+}
+
+/** Checkbox "Pieteikšanās iesaldēta" on a user row. */
+export async function setLoginFrozenAction(userId: string, frozen: boolean): Promise<ActionResult> {
+  const { ctx, error } = await developerGuard();
+  if (error) return error;
+  if (!uuid.safeParse(userId).success) return fail(ctx.t("errors.validation"));
+  if (userId === ctx.user.id) return fail("Savu kontu iesaldēt nevar");
+  const { data: m } = await ctx.supabase.from("organization_members").select("user_id").eq("organization_id", ctx.org.id).eq("user_id", userId).maybeSingle();
+  if (!m) return fail(ctx.t("errors.notFound"));
+  const r = await setLoginFrozen(userId, frozen, ctx.user.id);
+  if (!r.ok) return fail(r.error);
+  revalidatePath(PATH);
+  return { ok: true, message: frozen ? "Pieteikšanās iesaldēta" : "Pieteikšanās atjaunota" };
+}
+
+/** Freeze / unfreeze every member of this organization except the developer. */
+export async function setAllFrozenAction(frozen: boolean, _prev: ActionResult, _fd: FormData): Promise<ActionResult> {
+  const { ctx, error } = await developerGuard();
+  if (error) return error;
+  const { data: members } = await ctx.supabase.from("organization_members").select("user_id").eq("organization_id", ctx.org.id);
+  let n = 0;
+  for (const m of members ?? []) {
+    if (m.user_id === ctx.user.id) continue;
+    const r = await setLoginFrozen(m.user_id, frozen, ctx.user.id);
+    if (r.ok) n++;
+  }
+  revalidatePath(PATH);
+  return { ok: true, message: frozen ? `Iesaldēti ${n} lietotāji — ieiet var tikai tu` : `Pieteikšanās atjaunota ${n} lietotājiem` };
 }

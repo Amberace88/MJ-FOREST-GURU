@@ -9,11 +9,12 @@ import { DataTable } from "@/components/ui/table";
 import { requirePermission } from "@/lib/context";
 import { hasServiceRole } from "@/lib/env.server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { frozenMap } from "@/lib/login-freeze";
 import { fmtDateTime, fmtRelative } from "@/lib/format";
 import { grantableRoles } from "@/lib/invite";
 import { ROLE_KEYS, type RoleKey } from "@/lib/permissions";
 import { sp as one, statusTone } from "@/lib/utils";
-import { ChangeRoleDialog, InvitationActions, InviteDialog, MemberStatusButton, PermissionMatrix, PreparedAccounts, MemberLinkButton, RemoveMemberButton, type MatrixRole } from "./components";
+import { FreezeAllButtons, FreezeToggle, ChangeRoleDialog, InvitationActions, InviteDialog, MemberStatusButton, PermissionMatrix, PreparedAccounts, MemberLinkButton, RemoveMemberButton, type MatrixRole } from "./components";
 
 export const metadata: Metadata = { title: "Lietotāji un piekļuves" };
 
@@ -25,6 +26,7 @@ type MemberView = {
   userId: string; name: string; email: string | null; roles: string[]; primaryRole: string;
   status: "invited" | "active" | "disabled"; lastLogin: string | null; employee: { id: string; name: string } | null; isSelf: boolean;
   isDeveloper: boolean;
+  frozen: boolean;
 };
 
 /** Platform developers (app_metadata.platform_role = developer) — shown apart from the business roles. */
@@ -78,7 +80,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
       ? sb.from("employees").select("id, full_name, email").eq("organization_id", org).is("user_id", null).is("deleted_at", null).is("archived_at", null).order("full_name").limit(500)
       : Promise.resolve({ data: [] }),
   ]);
-  const developers = await developerIds(members.map((m) => m.user_id));
+  const [developers, frozen] = await Promise.all([developerIds(members.map((m) => m.user_id)), hasServiceRole() ? frozenMap(members.map((m) => m.user_id)) : Promise.resolve(new Map<string, boolean>())]);
   const viewerIsDeveloper = ctx.user.app_metadata?.platform_role === "developer";
   const profiles = new Map((profilesRes.data ?? []).map((p) => [p.id, p]));
   const employeeByUser = new Map((employeesRes.data ?? []).map((e) => [e.user_id as string, e]));
@@ -114,6 +116,7 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
       primaryRole: userRoles[0] ?? "employee", status, lastLogin, employee: emp ? { id: emp.id, name: emp.full_name ?? "" } : null,
       isSelf: m.user_id === ctx.user.id,
       isDeveloper: developers.has(m.user_id),
+      frozen: frozen.get(m.user_id) ?? false,
     };
   }).sort((a, b) => Number(a.isDeveloper) - Number(b.isDeveloper) || rank(b.primaryRole) - rank(a.primaryRole) || a.name.localeCompare(b.name, "lv"));
 
@@ -135,6 +138,18 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
   if (tab === "members") {
     content = (
       <div className="space-y-5">
+      {viewerIsDeveloper && serviceKey && (
+        <div className="card flex flex-col gap-3 border-crit/25 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 font-semibold text-ink"><KeyRound className="h-4 w-4 text-crit" /> Pieteikšanās iesaldēšana</p>
+            <p className="mt-0.5 text-xs text-muted">
+              Redzama tikai lapas izstrādātājam. Ar ķeksīti pie lietotāja uz laiku aizliedz ieiet (arī adminiem) — konts, lomas un dati paliek.
+              {memberRows.some((m) => m.frozen) && <b className="text-crit"> Šobrīd iesaldēti: {memberRows.filter((m) => m.frozen).length}.</b>}
+            </p>
+          </div>
+          <FreezeAllButtons />
+        </div>
+      )}
       <PreparedAccounts items={prepared} roles={invitableRoles} disabled={!serviceKey} />
       <DataTable rows={memberRows} rowKey={(r) => r.userId}
         empty={<EmptyState icon={<Users className="h-6 w-6" />} title={ctx.t("users.empty")} />}
@@ -158,7 +173,15 @@ export default async function UsersPage({ searchParams }: { searchParams: SP }) 
               ))}
             </span>
           ) },
-          { key: "status", header: ctx.t("common.status"), cell: (r) => <Badge tone={statusTone(r.status)} dot>{ctx.label("users.status", r.status)}</Badge> },
+          { key: "status", header: ctx.t("common.status"), cell: (r) => (
+            <span className="inline-flex flex-wrap items-center gap-1.5">
+              <Badge tone={statusTone(r.status)} dot>{ctx.label("users.status", r.status)}</Badge>
+              {r.frozen && !viewerIsDeveloper && <Badge tone="crit">Iesaldēts</Badge>}
+            </span>
+          ) },
+          ...(viewerIsDeveloper ? [{ key: "freeze", header: "Pieteikšanās", cell: (r: MemberView) => r.isDeveloper || r.isSelf
+            ? <span className="text-xs text-faint">vienmēr atļauta</span>
+            : <FreezeToggle userId={r.userId} frozen={r.frozen} name={r.name} /> }] : []),
           { key: "login", header: ctx.t("users.lastLogin"), cell: (r) => r.lastLogin
             ? <span className="text-ink-2" title={fmtDateTime(r.lastLogin, ctx.timezone)}>{fmtRelative(r.lastLogin)}</span>
             : <span className="text-faint">{ctx.t("users.never")}</span> },
