@@ -158,8 +158,11 @@ export async function syncTendersIfStale(opts: { force?: boolean } = {}): Promis
   const admin = createAdminClient();
   try {
     if (!opts.force) {
-      const { data } = await admin.from("tender_sync_state").select("last_run_at").eq("source", "iub").maybeSingle();
-      if (data?.last_run_at && Date.now() - Date.parse(data.last_run_at) < STALE_MS) return { ok: true, skipped: true, added: 0, days: 0 };
+      const { data } = await admin.from("tender_sync_state").select("last_run_at, last_day").eq("source", "iub").maybeSingle();
+      const age = data?.last_run_at ? Date.now() - Date.parse(data.last_run_at) : Infinity;
+      // still catching up on older days → continue soon (but never two runs at once)
+      const behind = !data?.last_day || data.last_day < addDays(rigaToday(), -2);
+      if (age < (behind ? 45_000 : STALE_MS)) return { ok: true, skipped: true, added: 0, days: 0 };
     }
     // mark the run first so parallel page loads do not all start a sync
     const { data: prev } = await admin.from("tender_sync_state").select("last_day").eq("source", "iub").maybeSingle();
