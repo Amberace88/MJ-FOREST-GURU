@@ -9,8 +9,9 @@ import type { ActionResult } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { forgotPasswordAction, loginAction, setPasswordAction } from "./actions";
 
-function Submit({ children }: { children: React.ReactNode }) {
-  const { pending } = useFormStatus();
+function Submit({ children, busy = false }: { children: React.ReactNode; busy?: boolean }) {
+  const { pending: formPending } = useFormStatus();
+  const pending = formPending || busy;
   return (
     <button type="submit" disabled={pending}
       className="group mt-2 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-forest-600 font-display text-lg font-semibold uppercase tracking-[0.14em] text-on-accent shadow-[inset_0_1px_0_#ffffff22,0_12px_30px_-10px_var(--forest-600)] transition hover:bg-forest-500 disabled:opacity-60">
@@ -35,6 +36,15 @@ function Field({ icon, label, children }: { icon: React.ReactNode; label: string
 
 const inputCls = "h-12 w-full rounded-xl border border-line bg-bg-2/80 pl-11 pr-4 text-[15px] text-ink placeholder:text-faint transition focus:border-forest-400 focus:outline-none focus:ring-4 focus:ring-forest-500/20";
 
+/** After a successful sign-in the action returns the target; do a hard navigation. */
+function useHardRedirect(state: ActionResult) {
+  const to = state.ok ? (state.data as { redirectTo?: string } | undefined)?.redirectTo : undefined;
+  useEffect(() => {
+    if (to) window.location.assign(to);
+  }, [to]);
+  return Boolean(to);
+}
+
 function Alert({ state }: { state: ActionResult }) {
   if (state.ok && !state.message) return null;
   return (
@@ -47,6 +57,7 @@ function Alert({ state }: { state: ActionResult }) {
 export function LoginForm({ next, expired, notConfigured, linkError }: { next?: string; expired?: boolean; notConfigured?: boolean; linkError?: string }) {
   const { t } = useT();
   const [state, action] = useActionState(loginAction, { ok: true } as ActionResult);
+  const redirecting = useHardRedirect(state);
   const [show, setShow] = useState(false);
   // Invite links from the Supabase dashboard land on the Site URL with the session in the fragment
   useEffect(() => {
@@ -76,7 +87,7 @@ export function LoginForm({ next, expired, notConfigured, linkError }: { next?: 
           {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
       </Field>
-      <Submit>{t("auth.login")}</Submit>
+      <Submit busy={redirecting}>{t("auth.login")}</Submit>
       <div className="pt-1 text-center">
         <Link href="/forgot-password" className="text-sm text-muted underline-offset-4 hover:text-ink hover:underline">{t("auth.forgot")}</Link>
         <p className="mt-2 text-xs text-faint">{t("auth.firstTime")}</p>
@@ -107,6 +118,7 @@ export function ForgotForm() {
 export function SetPasswordForm({ welcome, required, email }: { welcome?: boolean; required?: boolean; email?: string | null }) {
   const { t } = useT();
   const [state, action] = useActionState(setPasswordAction, { ok: true } as ActionResult);
+  const redirecting = useHardRedirect(state);
   const err = !state.ok ? state.fieldErrors : undefined;
   return (
     <form action={action} className="space-y-4">
@@ -123,7 +135,7 @@ export function SetPasswordForm({ welcome, required, email }: { welcome?: boolea
       <Field icon={<Lock className="h-4 w-4" />} label={t("auth.confirmPassword")}>
         <input name="confirm" type="password" autoComplete="new-password" minLength={10} required className={cn(inputCls, err?.confirm && "border-crit/60")} />
       </Field>
-      <Submit>{t("auth.setPassword")}</Submit>
+      <Submit busy={redirecting}>{t("auth.setPassword")}</Submit>
     </form>
   );
 }

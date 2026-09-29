@@ -1,7 +1,6 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createT, getDictionary } from "@/i18n";
 import type { ActionResult } from "@/lib/actions";
@@ -66,7 +65,8 @@ export async function loginAction(_prev: ActionResult, fd: FormData): Promise<Ac
   } catch (e) {
     logServerError("audit.login", e);
   }
-  redirect(safeNext(next));
+  // full page load (not a client-side RSC redirect) so the fresh auth cookies are used everywhere
+  return { ok: true, data: { redirectTo: safeNext(next) } };
 }
 
 export async function forgotPasswordAction(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -131,5 +131,5 @@ export async function setPasswordAction(_prev: ActionResult, fd: FormData): Prom
       logServerError("auth.accept_invite", e);
     }
   }
-  redirect("/dashboard");
+  return { ok: true, data: { redirectTo: "/dashboard" } };
 }
