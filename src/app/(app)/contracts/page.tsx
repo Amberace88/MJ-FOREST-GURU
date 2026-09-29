@@ -102,7 +102,11 @@ export default async function ContractsPage({ searchParams }: { searchParams: SP
             </form>
           </div>
 
-          {rows.length === 0 ? (
+          {contractsRes.error ? (
+            <Card><CardBody>
+              <EmptyState icon={<FileSignature className="h-6 w-6" />} title="Sadaļa vēl tiek aktivizēta" text="Datubāzes atjauninājums līgumiem vēl nav uzlikts. Tiklīdz tas būs izdarīts, šeit varēs pievienot līgumus." />
+            </CardBody></Card>
+          ) : rows.length === 0 ? (
             <Card><CardBody>
               <EmptyState icon={<FileSignature className="h-6 w-6" />} title={all.length ? "Nekas netika atrasts" : "Vēl nav līgumu"}
                 text={all.length ? "Maini filtru vai meklēšanas vārdu." : "Pievieno parakstītu līgumu vai izveido to no iegūtas iespējas (Klienti un darbi → Iespējas → „Līgums”)."} />

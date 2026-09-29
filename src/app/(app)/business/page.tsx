@@ -12,7 +12,7 @@ import { fetchFellingNotices, FELLING_TYPE_LV, SE_COUNTIES } from "@/lib/busines
 import type { TenderNoticeRow } from "@/lib/business/iub";
 import { TENDER_CATEGORY_LV, type TenderCategory } from "@/lib/business/tender-classify";
 import { syncTendersIfStale } from "@/lib/business/tender-sync";
-import type { TenderCountry } from "@/lib/business/ted";
+import { fetchTenders, type TenderCountry } from "@/lib/business/ted";
 import { requirePermission } from "@/lib/context";
 import { STAGE_PROBABILITY } from "@/lib/forest/leads";
 import { cn, sp as one } from "@/lib/utils";
@@ -80,10 +80,13 @@ export default async function BusinessPage({ searchParams }: { searchParams: SP 
   const leadRefs = new Set(leads.map((l) => l.external_ref).filter(Boolean));
   const today = new Date().toISOString().slice(0, 10);
 
-  const tenders = (tendersRes.data ?? []) as TenderNoticeRow[];
-  const tenderError = tendersRes.error ? "Iepirkumu datus neizdevās ielādēt" : undefined;
-  const openCount = stageCountsRes.count ?? 0;
-  const awards = (awardsRes.data ?? []) as TenderNoticeRow[];
+  // cache table unavailable (e.g. migration not applied yet) → fall back to the live TED feed
+  const fallback = needTenders && tendersRes.error ? await tedFallback(tenderCountries) : null;
+  const tenders = fallback ? fallback.rows.filter((t) => (stage === "all" || tab === "overview" ? t.stage === "competition" : stage === "open" ? t.stage === "competition" : t.stage === stage) && (!t.deadline || t.deadline >= nowIso || stage !== "open"))
+    : (tendersRes.data ?? []) as TenderNoticeRow[];
+  const tenderError = fallback?.error ?? undefined;
+  const openCount = fallback ? fallback.rows.filter((t) => t.stage === "competition" && (!t.deadline || t.deadline >= nowIso)).length : stageCountsRes.count ?? 0;
+  const awards = fallback ? fallback.rows.filter((t) => t.stage === "result").slice(0, 5) : (awardsRes.data ?? []) as TenderNoticeRow[];
   const lastSync = (syncRes.data ?? []).map((r) => r.last_run_at).filter(Boolean).sort().at(-1) ?? null;
   const felling = fellingRes.items;
   const openLeads = leads.filter((l) => l.status !== "won" && l.status !== "lost");
@@ -327,6 +330,20 @@ export default async function BusinessPage({ searchParams }: { searchParams: SP 
       {tab === "guide" && <OpportunityGuide countries={orgCountries.length ? orgCountries : undefined} />}
     </>
   );
+}
+
+async function tedFallback(countries: TenderCountry[]): Promise<{ rows: TenderNoticeRow[]; error?: string }> {
+  const { items, error } = await fetchTenders({ countries, sinceDays: 240, limit: 150 });
+  return {
+    error,
+    rows: items.map((t): TenderNoticeRow => ({
+      id: `ted:${t.id}`, source: "ted", country: t.countries[0] ?? "LV",
+      stage: t.kind === "award" ? "result" : t.kind === "prior" ? "planning" : "competition", notice_type: t.kind, title: t.title, description: null,
+      buyer_name: t.buyer, buyer_reg_no: null, buyer_city: null, buyer_email: null, buyer_phone: null, region: null, cpv: null, cpv_extra: [],
+      category: "harvesting", score: 6, nature: null, procedure: null, reference: t.id, published_on: t.published || null,
+      deadline: t.deadline ? `${t.deadline}T21:59:00Z` : null, duration_months: null, estimated_value: t.value, currency: t.currency, url: t.url,
+    })).sort((a, b) => (a.deadline ?? "9").localeCompare(b.deadline ?? "9")),
+  };
 }
 
 function safeHost(u: string) {
