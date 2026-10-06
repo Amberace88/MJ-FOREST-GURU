@@ -18,7 +18,7 @@ const text = (body: string, status: number, extra?: Record<string, string>) =>
  * Runs with the USER-scoped Supabase client: RLS decides whether the material is readable
  * (published for members, drafts only with manage_safety).
  */
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!UUID.test(id)) return text("Not found", 404);
 
@@ -38,7 +38,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       title: m.title, subtitle: m.subtitle, summary: m.summary, category: m.category as MaterialCategory, version: m.version,
       date: m.published_at ?? m.updated_at, country: ctx.countries.find((c) => c.id === m.country_id)?.name ?? null,
       audience: m.audience, readingMinutes: m.reading_minutes, requiresAck: m.requires_acknowledgement, body: m.body,
-    }, ctx.org.name);
+    }, ctx.org.name, { assetOrigin: req.nextUrl.origin });
     const name = pdfFileName(m.title, m.version);
     return new NextResponse(new Uint8Array(pdf), {
       status: 200,

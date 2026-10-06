@@ -1,0 +1,16 @@
+# Local Cloudflare preview (`npm run cf:preview` / `npx wrangler dev`): copy to .dev.vars
+# (git-ignored) and fill in. NEVER commit real values. Production values are Worker
+# secrets/variables — see docs/CLOUDFLARE_MIGRATION.md.
+# NEXT_PUBLIC_* are NOT read from here: they are inlined at build time, so export them in the
+# shell before `npx opennextjs-cloudflare build`.
+NEXTJS_ENV=production
+SUPABASE_SERVICE_ROLE_KEY=
+CRON_SECRET=
+MAPON_API_KEY=
+# MAPON_API_URL=https://mapon.com/api/v1
+RESEND_API_KEY=
+EMAIL_FROM="MJ Forest Guru <no-reply@mjforestguru.com>"
+# ANTHROPIC_API_KEY=
+# ANTHROPIC_MODEL=claude-sonnet-5
+# RECEIPT_OCR_ENDPOINT=
+# RECEIPT_OCR_TOKEN=

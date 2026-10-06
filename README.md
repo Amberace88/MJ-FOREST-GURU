@@ -228,6 +228,8 @@ The dataset covers LV (5 employees / 3 machines / 2 sites), SE (8/5/3) and IS (4
 
 ## Deployment
 
+> Cloudflare Workers (branch `cloudflare`, not deployed yet): see [docs/CLOUDFLARE_MIGRATION.md](docs/CLOUDFLARE_MIGRATION.md).
+
 ### Netlify
 
 1. Import the Git repository in Netlify. `netlify.toml` sets `npm run build` and `.next`, and Netlify detects the Next.js runtime automatically.

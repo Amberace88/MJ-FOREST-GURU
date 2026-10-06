@@ -14,24 +14,29 @@ import type { MaterialCategory } from "../types";
 
 /* ------------------------------------------------------------------ fonts */
 export const PDF_FONT_DIR = path.join(process.cwd(), "src", "lib", "training", "pdf", "fonts");
+/** Cloudflare Workers have no file system: there the fonts are fetched from static assets (`/pdf-fonts/`, copied by scripts/cloudflare/prepare.ts). */
+const isCloudflareWorkers = typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
 let fontsReady = false;
+/** `dir` is a directory on disk (Node) or an absolute http(s) base URL (Workers). */
 export function registerPdfFonts(dir = PDF_FONT_DIR) {
   if (fontsReady) return;
+  const isUrl = /^https?:\/\//.test(dir);
+  const join = (file: string) => (isUrl ? `${dir.replace(/\/$/, "")}/${file}` : path.join(dir, file));
   Font.register({
     family: "Inter",
     fonts: [
-      { src: path.join(dir, "Inter-Regular.ttf"), fontWeight: 400 },
-      { src: path.join(dir, "Inter-Italic.ttf"), fontWeight: 400, fontStyle: "italic" },
-      { src: path.join(dir, "Inter-Medium.ttf"), fontWeight: 500 },
-      { src: path.join(dir, "Inter-SemiBold.ttf"), fontWeight: 600 },
-      { src: path.join(dir, "Inter-Bold.ttf"), fontWeight: 700 },
+      { src: join("Inter-Regular.ttf"), fontWeight: 400 },
+      { src: join("Inter-Italic.ttf"), fontWeight: 400, fontStyle: "italic" },
+      { src: join("Inter-Medium.ttf"), fontWeight: 500 },
+      { src: join("Inter-SemiBold.ttf"), fontWeight: 600 },
+      { src: join("Inter-Bold.ttf"), fontWeight: 700 },
     ],
   });
   Font.register({
     family: "Saira",
     fonts: [
-      { src: path.join(dir, "SairaCondensed-SemiBold.ttf"), fontWeight: 600 },
-      { src: path.join(dir, "SairaCondensed-Bold.ttf"), fontWeight: 700 },
+      { src: join("SairaCondensed-SemiBold.ttf"), fontWeight: 600 },
+      { src: join("SairaCondensed-Bold.ttf"), fontWeight: 700 },
     ],
   });
   // Latvian words must not be hyphenated with English rules
@@ -403,8 +408,16 @@ export function TrainingMaterialPdf({ m, orgName }: { m: PdfMaterial; orgName?: 
   );
 }
 
-/** Renders the material to a PDF buffer (registers the embedded fonts on first use). */
-export async function renderMaterialPdf(m: PdfMaterial, orgName?: string): Promise<Buffer> {
-  registerPdfFonts();
+/**
+ * Renders the material to a PDF buffer (registers the embedded fonts on first use).
+ * `assetOrigin` (the request origin) is required on Cloudflare Workers, where fonts are fetched from static assets.
+ */
+export async function renderMaterialPdf(m: PdfMaterial, orgName?: string, opts: { assetOrigin?: string } = {}): Promise<Buffer> {
+  if (isCloudflareWorkers) {
+    if (!opts.assetOrigin) throw new Error("renderMaterialPdf: assetOrigin is required on Cloudflare Workers");
+    registerPdfFonts(`${opts.assetOrigin}/pdf-fonts`);
+  } else {
+    registerPdfFonts();
+  }
   return renderToBuffer(<TrainingMaterialPdf m={m} orgName={orgName} />);
 }

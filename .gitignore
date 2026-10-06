@@ -43,3 +43,13 @@ yarn-error.log*
 next-env.d.ts
 .claude/
 public/maplibre/
+
+# cloudflare workers (opennext / wrangler)
+.open-next/
+.wrangler/
+.dev.vars*
+!.dev.vars.example
+cloudflare-env.d.ts
+public/pdf-fonts/
+cloudflare/.generated/
+public/_headers

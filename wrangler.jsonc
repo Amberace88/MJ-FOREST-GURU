@@ -1,0 +1,41 @@
+/**
+ * Cloudflare Workers configuration for MJ Forest Guru (branch `cloudflare`).
+ * Built by `npx opennextjs-cloudflare build`, deployed by `npx opennextjs-cloudflare deploy`.
+ * See docs/CLOUDFLARE_MIGRATION.md. No secrets here: runtime secrets are set with
+ * `wrangler secret put` / the dashboard, build-time NEXT_PUBLIC_* as Workers Builds variables.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mj-forest-guru",
+  // Custom entry: re-exports the generated OpenNext worker (.open-next/worker.js) and adds
+  // the scheduled() handler for the Mapon cron. Wrangler requires the cron handler to live
+  // in the main module, so `main` points here instead of directly at .open-next/worker.js.
+  "main": "cloudflare/worker.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // Keep runtime variables set in the dashboard on every deploy (secrets are always kept).
+  "keep_vars": true,
+  // Cloudflare Images for next/image (/_next/image). Optional: without it the original
+  // image is served unchanged. Free within the monthly allowance of unique transformations.
+  "images": { "binding": "IMAGES" },
+  // Runtime compatibility for @react-pdf/renderer (training-material PDFs), see docs/CLOUDFLARE_MIGRATION.md:
+  //  - pdfkit loads its standard fonts through createRequire(); the shim serves them from the bundle.
+  //  - pdfkit / yoga read import.meta.url at module load; Workers leave it undefined in the bundle.
+  "alias": { "module": "./cloudflare/shims/node-module.ts" },
+  "define": { "import.meta.url": "\"file:///bundle/worker.js\"" },
+  // Mapon GPS sync (replaces the external cron that called /api/cron/mapon).
+  "triggers": { "crons": ["*/10 * * * *"] },
+  "observability": { "enabled": true }
+  // Custom domains are attached in the dashboard at cut-over time (docs/CLOUDFLARE_MIGRATION.md
+  // → "Custom domains"), deliberately not here, so a deploy can never take the domains away
+  // from Netlify by accident. Once cut over they may be pinned here:
+  // "routes": [
+  //   { "pattern": "mjforestguru.com", "custom_domain": true },
+  //   { "pattern": "www.mjforestguru.com", "custom_domain": true },
+  //   { "pattern": "app.mjforestguru.com", "custom_domain": true }
+  // ]
+}
