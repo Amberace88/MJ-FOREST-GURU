@@ -28,7 +28,8 @@
   "alias": { "module": "./cloudflare/shims/node-module.ts" },
   "define": { "import.meta.url": "\"file:///bundle/worker.js\"" },
   // Mapon GPS sync (replaces the external cron that called /api/cron/mapon).
-  "triggers": { "crons": ["*/10 * * * *"] },
+  // Paused while there are no live users; to re-enable: "crons": ["*/10 * * * *"].
+  "triggers": { "crons": [] },
   "observability": { "enabled": true }
   // Custom domains are attached in the dashboard at cut-over time (docs/CLOUDFLARE_MIGRATION.md
   // → "Custom domains"), deliberately not here, so a deploy can never take the domains away
